@@ -15,15 +15,18 @@ export default function StatPills() {
         return (
           <div
             key={s.k}
-            className="rounded-3xl border border-white/12 bg-white/5 shadow-card p-5"
+            className="rounded-3xl border border-white/15 bg-home/85 shadow-card p-5"
           >
             <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                <Icon size={18} />
+              <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 grid place-items-center">
+                <Icon size={18} className="text-white" />
               </div>
+
               <div>
-                <div className="text-sm text-white/70">{s.k}</div>
-                <div className="text-xl font-extrabold">{s.v}</div>
+                <div className="text-sm text-white/80">{s.k}</div>
+                <div className="text-xl font-extrabold text-white">
+                  {s.v}
+                </div>
               </div>
             </div>
           </div>

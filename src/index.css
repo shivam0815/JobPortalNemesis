@@ -9,8 +9,9 @@
 html, body, #root { height: 100%; }
 
 body {
-  @apply bg-[#0B4FA8] text-white font-sans;
+  @apply bg-transparent text-white font-sans;
 }
+
 
 
 
