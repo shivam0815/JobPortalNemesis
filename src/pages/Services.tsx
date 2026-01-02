@@ -1,13 +1,13 @@
 // src/pages/Services.tsx
 import {
   Briefcase,
-  ShieldCheck,
+  
   Wrench,
   Users,
   Search as SearchIcon,
   GraduationCap,
   ScrollText,
-  Crown,
+
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
