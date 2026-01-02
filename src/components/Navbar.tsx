@@ -159,14 +159,7 @@ export default function Navbar() {
                   </div>
 
                   <div className="p-3 border-t border-white/10 grid gap-2">
-                    <Link
-                      to="/services"
-                      onClick={() => setSvcOpen(false)}
-                      className="block text-center px-4 py-2 rounded-xl bg-white/10 border border-white/12 text-white font-extrabold text-sm hover:bg-white/12 transition"
-                    >
-                      All Services
-                    </Link>
-
+                   
                     <Link
                       to="/jobs"
                       onClick={() => setSvcOpen(false)}
