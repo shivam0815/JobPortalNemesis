@@ -16,12 +16,7 @@ const services = [
     icon: Briefcase,
     desc: "Payroll processing, salary structure, reports, payslips.",
   },
-  {
-    title: "Statutory Compliance",
-    slug: "statutory-compliance",
-    icon: ShieldCheck,
-    desc: "PF/ESI, labour compliance, filings and audits support.",
-  },
+ 
   {
     title: "IT Staffing",
     slug: "it-staffing",
@@ -52,12 +47,7 @@ const services = [
     icon: ScrollText,
     desc: "Policies, SOPs, HR process setup & optimization.",
   },
-  {
-    title: "Executive Search",
-    slug: "executive-search",
-    icon: Crown,
-    desc: "Leadership hiring with strict screening & matching.",
-  },
+  
 ];
 
 export default function ServiceCards() {

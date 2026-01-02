@@ -10,13 +10,13 @@ const navClass = ({ isActive }: any) =>
 
 const services = [
   ["Payroll Services", "payroll"],
-  ["Statutory Compliance", "statutory-compliance"],
+  
   ["IT Staffing", "it-staffing"],
   ["Staffing Solutions", "staffing-solutions"],
   ["Recruitment", "recruitment"],
   ["Training & Development", "training-development"],
   ["HR Consulting", "hr-consulting"],
-  ["Executive Search", "executive-search"],
+  
 ] as const;
 
 export default function Navbar() {
