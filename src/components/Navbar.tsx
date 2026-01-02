@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  Briefcase,
+  
   Menu,
   X,
   Building2,
@@ -92,11 +92,9 @@ export default function Navbar() {
         <div className="relative mx-auto w-full max-w-7xl px-4 md:px-6 h-16 flex items-center justify-between">
           {/* Brand */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-9 w-9 rounded-2xl bg-white/12 border border-white/12 grid place-items-center group-hover:bg-white/15 transition">
-              <Briefcase size={18} />
-            </div>
+            
             <div className="leading-tight">
-              <div className="font-extrabold tracking-wide">Nemesis Group</div>
+              <div className="font-extrabold tracking-wide">NEMESIS GROUP</div>
               
             </div>
           </Link>
