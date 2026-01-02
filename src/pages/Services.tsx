@@ -7,7 +7,10 @@ import {
   Search as 
   GraduationCap,
   ScrollText,
-
+  Landmark,
+  Users,
+  BriefcaseBusiness,
+  Handshake,
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
@@ -22,32 +25,52 @@ type Svc = {
 };
 
 const services: Svc[] = [
-  
-
- 
-
   {
-  title: "Customer Care & Training",
-  slug: "customer-care-training",
-  icon: GraduationCap,
-  short: "Soft skills, customer care, HR, finance training.",
-  points: [
-    "Soft skills",
-    "Customer care training",
-    "HR training",
-    "Finance basics",
-  ],
-},
-
+    title: "Customer Care & Training",
+    slug: "customer-care-training",
+    icon: GraduationCap,
+    short: "Soft skills, customer care, HR, finance training.",
+    points: ["Soft skills", "Customer care training", "HR training", "Finance basics"],
+  },
   {
-    title: "HR Consulting",
+    title: "HR Training",
     slug: "hr-consulting",
     icon: ScrollText,
     short: "Policies, SOPs, HR process setup & optimization.",
     points: ["HR policies & SOPs", "Process setup", "Performance framework", "HR audits"],
   },
-  
+
+  // New 4 services from image
+  {
+    title: "Banking & Finance Training",
+    slug: "banking-finance-training",
+    icon: Landmark,
+    short: "Core banking knowledge, finance fundamentals & industry readiness.",
+    points: ["Banking fundamentals", "Financial literacy", "NBFC insights", "Interview prep for BFSI"],
+  },
+  {
+    title: "Soft Skills & Skill Development",
+    slug: "soft-skills-development",
+    icon: Users,
+    short: "Communication, behavioral skills, and professional personality training.",
+    points: ["Communication skills", "Personality development", "Behavioral training", "Corporate etiquette"],
+  },
+  {
+    title: "Practical Industry Training",
+    slug: "practical-industry-training",
+    icon: BriefcaseBusiness,
+    short: "Hands-on, real-world training designed for industry workflows.",
+    points: ["Live projects", "Industry case studies", "Role-based training", "Job readiness"],
+  },
+  {
+    title: "Placement Support Services",
+    slug: "placement-support",
+    icon: Handshake,
+    short: "Guaranteed interview support & placement guidance.",
+    points: ["Resume building", "Mock interviews", "Job referrals", "Placement assistance"],
+  },
 ];
+
 
 const card =
   "rounded-3xl border border-white/10 bg-white/6 shadow-card p-6 md:p-8";
@@ -69,7 +92,8 @@ export default function Services() {
               Services
             </h1>
             <p className="mt-2 text-white/75 max-w-3xl leading-relaxed">
-              Guaranteed interview experience for candidates and reliable hiring solutions for employers.
+              Guaranteed Interviews & Placement Assurance
+              
               Choose a service to view details and enquiry options.
             </p>
           </div>

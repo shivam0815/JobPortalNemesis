@@ -186,7 +186,7 @@ export default function Home() {
                 to="/services"
                 className="inline-flex items-center gap-2 rounded-2xl bg-white text-[#0B4FA8] px-5 py-3 font-bold shadow-soft hover:opacity-95 transition"
               >
-                Explore Services <ArrowRight size={18} />
+                 Training Program <ArrowRight size={18} />
               </Link>
               <a
                 href="#contact"
@@ -425,12 +425,12 @@ export default function Home() {
       >
         <div className="grid md:grid-cols-2 gap-5">
           <ServiceTile
-            title="HR Training Services"
+            title="HR Training "
             desc="Recruitment, staffing, HR operations, payroll basics, labor laws, compliance, employee engagement, and workplace professionalism."
             to="/services/hr-training"
           />
           <ServiceTile
-            title="Customer Care Training Services"
+            title="Customer Care Training "
             desc="Communication skills, call handling, email/chat etiquette, problem-solving, complaint management, and service quality."
             to="/services/customer-training"
           />

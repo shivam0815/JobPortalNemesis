@@ -116,6 +116,59 @@ export default function About() {
         </p>
       </section>
 
+      {/* ABOUT US FULL TEXT */}
+      <section className={"mt-6 " + card}>
+        <h2 className="text-xl md:text-2xl font-extrabold">
+          About Us – Nemesis Group
+        </h2>
+
+        <div className="mt-4 space-y-4 text-white/75 leading-relaxed">
+          <p>
+            Nemesis Group is a leading staffing and workforce solutions firm based in India, delivering comprehensive human resource and talent management services to organizations across a wide range of industries. With a strong foundation built on quality, integrity, and long-term partnerships, we specialize in executive search, permanent recruitment, temporary staffing, and compliance management solutions that enable businesses to grow efficiently, compliantly, and sustainably.
+          </p>
+
+          <p>
+            Our mission is to deliver exceptional service and consistent support to our clients as well as our associate employees, while striving to become the most respected and trusted staffing firm in every market we serve. We strongly believe that people are the backbone of organizational success, and our approach is centered on connecting the right talent with the right opportunity at the right time.
+          </p>
+
+          <p>
+            Backed by over a decade of industry experience, Nemesis Group has developed deep market knowledge and a clear understanding of evolving workforce trends. Our team of highly skilled and dedicated professionals works closely with clients to understand their business objectives, organizational culture, and workforce challenges. This consultative approach allows us to design customized, hassle-free staffing solutions that align with both short-term operational needs and long-term strategic goals.
+          </p>
+
+          <p>
+            We offer end-to-end recruitment solutions across multiple domains, ensuring access to qualified, reliable, and performance-driven talent. Our executive search services help organizations identify and attract leadership professionals capable of driving growth and transformation. Through permanent recruitment, we assist companies in building strong and stable teams, while our temporary staffing solutions provide flexibility, scalability, and cost efficiency. Additionally, our compliance management services ensure adherence to statutory regulations and labor laws, enabling clients to operate with confidence and minimal risk.
+          </p>
+
+          <p>
+            Alongside staffing solutions, Nemesis Group is deeply committed to talent development and career building for fresher candidates. We recognize that many graduates and early-career professionals face challenges in entering the corporate world due to a lack of practical exposure and industry readiness. To address this gap, we have developed structured, job-oriented training programs designed to help freshers build, maintain, and grow their professional careers with confidence.
+          </p>
+
+          <p>
+            Our HR Training Program for Freshers is designed to bridge the gap between academic learning and real-world corporate HR practices. The program covers core HR functions such as recruitment and staffing processes, interview coordination, payroll fundamentals, labor laws and statutory compliance, HR operations, employee engagement, and performance management. In addition to technical knowledge, we focus on communication skills, documentation, corporate etiquette, and workplace professionalism to ensure candidates are industry-ready.
+          </p>
+
+          <p>
+            In addition to HR training, Nemesis Group offers Customer Care and Customer Support Training for freshers aspiring to build careers in service-oriented roles. This program focuses on customer interaction skills, call handling techniques, email and chat support, problem-solving, complaint management, and service quality standards. Candidates are trained in professional communication, customer relationship management, and handling real-life customer scenarios. This training helps freshers gain confidence, improve interpersonal skills, and prepare for roles in customer support, BPOs, and service-driven organizations.
+          </p>
+
+          <p>
+            We also provide Banking and Financial Services Training for Freshers, aimed at candidates seeking entry-level roles in the banking and finance sector. This program covers banking fundamentals, financial products, customer onboarding, KYC norms, basic accounting concepts, compliance awareness, and customer service in banking environments. Emphasis is placed on accuracy, professionalism, ethical practices, and regulatory understanding, enabling candidates to adapt quickly to banking operations and corporate expectations.
+          </p>
+
+          <p>
+            All our training programs are led by experienced industry professionals who bring real-world insights into the learning process. The methodology combines theoretical understanding with practical exposure, live examples, case studies, role plays, and career guidance sessions. Our focus is not only on skill development but also on building the right mindset, confidence, and professionalism required to sustain long-term careers.
+          </p>
+
+          <p>
+            At Nemesis Group, we believe in empowering individuals to maintain and grow their careers through continuous learning and practical exposure. Whether it is HR, customer care, or banking, our training programs are designed to make freshers employable, confident, and workplace-ready.
+          </p>
+
+          <p>
+            At the heart of Nemesis Group lies a commitment to trust, transparency, and excellence. We focus on building long-term relationships with clients, candidates, and partners by consistently delivering value-driven solutions. As workforce dynamics continue to evolve, Nemesis Group remains dedicated to innovation, continuous improvement, and creating meaningful employment opportunities that drive business success and individual career growth.add this text into this code donts miss and remove any complete this text
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="mt-8 text-center">
         <div className="inline-flex flex-col sm:flex-row gap-3">
