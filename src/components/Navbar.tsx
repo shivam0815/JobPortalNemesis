@@ -52,10 +52,7 @@ export default function Navbar() {
       if (open && mobilePanelRef.current && !mobilePanelRef.current.contains(e.target as Node)) {
         // click outside closes mobile menu
         const target = e.target as Node;
-        // but ignore clicks on the menu button itself (header area)
-        // (safe fallback: do nothing if click is inside header)
-        // since header isn't referenced, keep minimal.
-        // If you want strict, pass a ref to header button too.
+     
         if (target) setOpen(false);
       }
     };

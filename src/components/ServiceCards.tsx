@@ -1,12 +1,12 @@
 import {
   Briefcase,
-  ShieldCheck,
+  
   Users,
   GraduationCap,
   Search,
   Wrench,
   ScrollText,
-  Crown,
+  
 } from "lucide-react";
 
 const services = [
