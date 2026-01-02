@@ -16,7 +16,7 @@ import CandidateProfile from "./pages/candidate/CandidateProfile";
 import CandidateApplications from "./pages/candidate/CandidateApplications";
 
 import ServiceDetail from "./pages/services/ServiceDetail";
-import HRConsulting from "./pages/services/HrConsulting"; // ✅ file name same rakho
+import HRConsulting from "./pages/services/HRConsulting"; // ✅ file name same rakho
 
 export default function App() {
   return (
