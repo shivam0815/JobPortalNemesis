@@ -42,7 +42,8 @@ export default function Home() {
   }, [q, city, exp, mode]);
 
   return (
-    <main className="relative bg-[#1F4F8F] home-navy overflow-x-hidden">
+    <main className="relative bg-home home-navy overflow-x-hidden">
+
       {/* HERO */}
       <HeroNemesis />
 
