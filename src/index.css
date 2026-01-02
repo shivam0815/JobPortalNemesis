@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  @apply bg-[#0B4FA8] text-white font-sans;
+}
+
+
+
+/* dotted pattern like your poster */
+.dot-grid {
+  background-image: radial-gradient(rgba(255,255,255,0.22) 1.2px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+
+/* smooth container */
+.container-x {
+  @apply mx-auto w-full max-w-7xl px-4 md:px-6;
+}
