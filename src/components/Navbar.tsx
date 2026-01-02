@@ -43,19 +43,16 @@ export default function Navbar() {
 
   // close dropdown on outside click / esc
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      // services dropdown (desktop)
-      if (svcRef.current && !svcRef.current.contains(e.target as Node)) {
-        setSvcOpen(false);
-      }
-      // mobile panel
-      if (open && mobilePanelRef.current && !mobilePanelRef.current.contains(e.target as Node)) {
-        // click outside closes mobile menu
-        const target = e.target as Node;
-     
-        if (target) setOpen(false);
-      }
-    };
+   const onDown = (e: MouseEvent) => {
+  const target = e.target as Node;
+
+  // ✅ Mobile menu ke andar click ho to dropdown close mat karo
+  if (mobilePanelRef.current?.contains(target)) return;
+
+  // ✅ Desktop dropdown outside click close
+  if (svcRef.current && !svcRef.current.contains(target)) setSvcOpen(false);
+};
+
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -72,11 +69,18 @@ export default function Navbar() {
     };
   }, [open]);
 
-  const goService = (slug: string) => {
-    setSvcOpen(false);
-    setOpen(false);
+ const goService = (slug: string) => {
+  // ✅ instantly close UI
+  setSvcOpen(false);
+  setOpen(false);
+
+  // ✅ then navigate (next tick so dropdown hides immediately)
+  requestAnimationFrame(() => {
     nav(`/services/${slug}`);
-  };
+    window.scrollTo(0, 0);
+  });
+};
+
 
   return (
     <header className="sticky top-0 z-50">
