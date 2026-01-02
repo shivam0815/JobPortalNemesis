@@ -97,9 +97,7 @@ export default function Navbar() {
             </div>
             <div className="leading-tight">
               <div className="font-extrabold tracking-wide">Nemesis Group</div>
-              <div className="text-[11px] text-white/70 -mt-0.5">
-                HR • Staffing • Compliance
-              </div>
+              
             </div>
           </Link>
 

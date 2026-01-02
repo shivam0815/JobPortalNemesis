@@ -15,6 +15,7 @@ import CandidateHome from "./pages/candidate/CandidateHome";
 import CandidateProfile from "./pages/candidate/CandidateProfile";
 import CandidateApplications from "./pages/candidate/CandidateApplications";
 import About from "./pages/About";
+import Services from "./pages/Services";
 
 import ServiceDetail from "./pages/services/ServiceDetail";
 import HRConsulting from "./pages/services/HRConsulting"; 
@@ -38,6 +39,7 @@ export default function App() {
 <Route path="/terms" element={<Terms />} />
 <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/about" element={<About />} />
+        <Route path="/services" element={<Services />} />
 <Route path="/services/training-development" element={<TrainingDevelopment />} />
         {/* Candidate (Nested) ✅ */}
         <Route path="/candidate" element={<CandidateShell />}>
