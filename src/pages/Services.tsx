@@ -27,12 +27,18 @@ const services: Svc[] = [
  
 
   {
-    title: "CutomerCare & Training",
-    slug: "training-development",
-    icon: GraduationCap,
-    short: "Soft skills, customer care, HR, finance training.",
-    points: ["Soft skills", "Customer care training", "HR training", "Finance basics"],
-  },
+  title: "Customer Care & Training",
+  slug: "customer-care-training",
+  icon: GraduationCap,
+  short: "Soft skills, customer care, HR, finance training.",
+  points: [
+    "Soft skills",
+    "Customer care training",
+    "HR training",
+    "Finance basics",
+  ],
+},
+
   {
     title: "HR Consulting",
     slug: "hr-consulting",
@@ -63,7 +69,7 @@ export default function Services() {
               Services
             </h1>
             <p className="mt-2 text-white/75 max-w-3xl leading-relaxed">
-              End-to-end HR solutions for employers and career support for candidates.
+              Guaranteed interview experience for candidates and reliable hiring solutions for employers.
               Choose a service to view details and enquiry options.
             </p>
           </div>
