@@ -24,7 +24,7 @@ import TrainingDevelopment from "./pages/services/TrainingDevelopment";
 import ContactUs from "./pages/ContactUs";
 import Terms from "./pages/Terms";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-
+import CustomerTraining from "./pages/services/CustomerCareTraining";
 export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0B4FA8] to-[#083B7E]">
@@ -51,7 +51,7 @@ export default function App() {
         {/* Employer + Admin */}
         <Route path="/employer" element={<EmployerDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
-
+<Route path="/services/customer-care-training" element={<CustomerTraining />} />
         {/* Services */}
         <Route path="/services/:slug" element={<ServiceDetail />} />
 

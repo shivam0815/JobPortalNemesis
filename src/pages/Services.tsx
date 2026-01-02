@@ -52,7 +52,7 @@ const services: Svc[] = [
     points: ["Requirement understanding", "Shortlisting", "Interview coordination", "Offer & joining support"],
   },
   {
-    title: "Training & Development",
+    title: "CutomerCare & Training",
     slug: "training-development",
     icon: GraduationCap,
     short: "Soft skills, customer care, HR, finance training.",
