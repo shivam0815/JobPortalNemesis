@@ -151,7 +151,7 @@ export default function HeroNemesis() {
 
             <motion.div {...fadeUp(0.4)} className="mt-7 flex flex-wrap gap-4 text-sm text-white/90">
               <div className="inline-flex items-center gap-2">
-                <Phone size={16} /> +91- 8808062698
+                <Phone size={16} /> +91-9999999999
               </div>
               <div className="inline-flex items-center gap-2">
                 <Globe size={16} /> nemesisgroup.in

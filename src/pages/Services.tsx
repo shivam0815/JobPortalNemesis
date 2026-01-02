@@ -29,13 +29,7 @@ const services: Svc[] = [
     short: "Payroll processing, salary structure, reports, payslips.",
     points: ["Monthly payroll processing", "Payslips & registers", "Salary structure support", "MIS & reporting"],
   },
-  {
-    title: "Statutory Compliance",
-    slug: "statutory-compliance",
-    icon: ShieldCheck,
-    short: "PF/ESI, labour compliance, filings and audits support.",
-    points: ["PF/ESI support", "Labour compliance", "Filings & documentation", "Audit support"],
-  },
+ 
   {
     title: "IT Staffing",
     slug: "it-staffing",
@@ -71,13 +65,7 @@ const services: Svc[] = [
     short: "Policies, SOPs, HR process setup & optimization.",
     points: ["HR policies & SOPs", "Process setup", "Performance framework", "HR audits"],
   },
-  {
-    title: "Executive Search",
-    slug: "executive-search",
-    icon: Crown,
-    short: "Leadership hiring with strict screening & matching.",
-    points: ["Leadership hiring", "Confidential search", "Strict screening", "Culture-fit matching"],
-  },
+  
 ];
 
 const card =
