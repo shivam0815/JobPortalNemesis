@@ -3,7 +3,7 @@ import { motion, type Transition } from "framer-motion";
 import {
   CheckCircle2,
   Sparkles,
-  Phone,
+  
   Globe,
   Mail,
   ArrowRight,
@@ -150,9 +150,7 @@ export default function HeroNemesis() {
             </motion.div>
 
             <motion.div {...fadeUp(0.4)} className="mt-7 flex flex-wrap gap-4 text-sm text-white/90">
-              <div className="inline-flex items-center gap-2">
-                <Phone size={16} /> +91-9999999999
-              </div>
+              
               <div className="inline-flex items-center gap-2">
                 <Globe size={16} /> nemesisgroup.in
               </div>

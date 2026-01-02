@@ -1,4 +1,4 @@
-import { Phone, Globe, Mail } from "lucide-react";
+import {  Globe, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -46,10 +46,7 @@ export default function Footer() {
           <div>
             <div className="text-sm font-semibold text-white mb-3">Contact</div>
             <div className="space-y-2 text-sm text-white/75">
-              <div className="flex items-center gap-2">
-                <Phone size={16} />
-                +91-9999999999
-              </div>
+              
               <div className="flex items-center gap-2">
                 <Mail size={16} />
                 flexicare@nemesisgroup.in
