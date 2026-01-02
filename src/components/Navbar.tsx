@@ -62,9 +62,7 @@ export default function Navbar() {
             </div>
             <div className="leading-tight">
               <div className="font-extrabold tracking-wide">Nemesis Group</div>
-              <div className="text-[11px] text-white/75 -mt-0.5">
-                Job Portal + HR Services
-              </div>
+              
             </div>
           </Link>
 

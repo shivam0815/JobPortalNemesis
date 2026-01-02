@@ -16,7 +16,9 @@ import CandidateProfile from "./pages/candidate/CandidateProfile";
 import CandidateApplications from "./pages/candidate/CandidateApplications";
 
 import ServiceDetail from "./pages/services/ServiceDetail";
-import HRConsulting from "./pages/services/HRConsulting"; // ✅ file name same rakho
+import HRConsulting from "./pages/services/HRConsulting"; 
+import TrainingDevelopment from "./pages/services/TrainingDevelopment";
+// ✅ file name same rakho
 import ContactUs from "./pages/ContactUs";
 import Terms from "./pages/Terms";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -34,7 +36,7 @@ export default function App() {
 <Route path="/contact" element={<ContactUs />} />
 <Route path="/terms" element={<Terms />} />
 <Route path="/privacy" element={<PrivacyPolicy />} />
-
+<Route path="/services/training-development" element={<TrainingDevelopment />} />
         {/* Candidate (Nested) ✅ */}
         <Route path="/candidate" element={<CandidateShell />}>
           <Route index element={<CandidateHome />} />
