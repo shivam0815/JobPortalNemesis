@@ -1,10 +1,10 @@
 // src/pages/Services.tsx
 import {
-  Briefcase,
   
-  Wrench,
-  Users,
-  Search as SearchIcon,
+  
+  
+  
+  Search as 
   GraduationCap,
   ScrollText,
 
