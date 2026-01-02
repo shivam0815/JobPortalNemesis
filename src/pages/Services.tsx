@@ -22,35 +22,10 @@ type Svc = {
 };
 
 const services: Svc[] = [
-  {
-    title: "Payroll Services",
-    slug: "payroll-services",
-    icon: Briefcase,
-    short: "Payroll processing, salary structure, reports, payslips.",
-    points: ["Monthly payroll processing", "Payslips & registers", "Salary structure support", "MIS & reporting"],
-  },
+  
+
  
-  {
-    title: "IT Staffing",
-    slug: "it-staffing",
-    icon: Wrench,
-    short: "Contract / permanent IT hiring with fast turnaround.",
-    points: ["Contract staffing", "Permanent hiring", "Fast turnaround", "Role-based screening"],
-  },
-  {
-    title: "Staffing Solutions",
-    slug: "staffing-solutions",
-    icon: Users,
-    short: "Bulk hiring, vendor management, onsite/offsite deployment.",
-    points: ["Bulk hiring", "Onsite/Offsite deployment", "Vendor management", "Workforce planning"],
-  },
-  {
-    title: "Recruitment",
-    slug: "recruitment",
-    icon: SearchIcon,
-    short: "End-to-end recruitment for multiple industries.",
-    points: ["Requirement understanding", "Shortlisting", "Interview coordination", "Offer & joining support"],
-  },
+
   {
     title: "CutomerCare & Training",
     slug: "training-development",
