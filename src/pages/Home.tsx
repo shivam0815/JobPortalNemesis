@@ -171,52 +171,49 @@ export default function Home() {
             <ChatWidgetMock />
 
             {/* Top Companies */}
-            <section className="rounded-3xl border border-[#8FB1DA]/40 bg-[#1F4F8F]/90 shadow-card p-5 sm:p-6">
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-xl font-extrabold text-white">Top Companies</h3>
-                  <p className="text-[#EAF2FF] text-sm mt-1">Follow for updates & jobs.</p>
+            {/* Top Companies – Animated */}
+<section className="rounded-3xl border border-[#8FB1DA]/40 bg-[#1F4F8F]/90 shadow-card p-5 sm:p-6">
+  <h3 className="text-xl font-extrabold text-white">Top Companies</h3>
+  <p className="text-[#EAF2FF] text-sm mt-1">Actively hiring</p>
+
+  <div className="relative mt-6 h-[140px] overflow-hidden">
+    {topCompanies.map((c, i) => (
+      <div
+        key={c.name}
+        className="absolute inset-0 company-shuffle"
+        style={{ animationDelay: `${i * 3}s` }}
+      >
+        <div className="rounded-3xl bg-[#1F4F8F]/85 border border-[#8FB1DA]/30 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-[#4A79B8] grid place-items-center">
+                <Building2 size={18} className="text-white" />
+              </div>
+
+              <div>
+                <div className="font-extrabold text-white">{c.name}</div>
+                <div className="text-sm text-[#EAF2FF] mt-0.5">
+                  {c.tag} • {c.city}
                 </div>
               </div>
+            </div>
 
-              <div className="mt-4 space-y-3">
-                {topCompanies.map((c) => (
-                  <div
-                    key={c.name}
-                    className="rounded-3xl bg-[#1F4F8F]/85 border border-[#8FB1DA]/30 p-4 hover:bg-[#4A79B8]/60 transition"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-2xl bg-[#4A79B8] grid place-items-center shrink-0">
-                          <Building2 size={18} className="text-white" />
-                        </div>
+            {c.verified && (
+              <span className="text-xs px-2 py-1 rounded-full bg-white/10 border border-white/12 text-white">
+                <BadgeCheck size={14} /> Verified
+              </span>
+            )}
+          </div>
 
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div className="font-extrabold text-white truncate max-w-[16rem] sm:max-w-[18rem]">
-                              {c.name}
-                            </div>
-                            {c.verified && (
-                              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-white/10 border border-white/12 text-white">
-                                <BadgeCheck size={14} /> Verified
-                              </span>
-                            )}
-                          </div>
+          <button className="mt-4 w-full px-4 py-2 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition">
+            Follow
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
 
-                          <div className="text-sm text-[#EAF2FF] mt-0.5 break-words">
-                            {c.tag} • {c.city}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white text-[#061433] font-extrabold text-sm hover:opacity-95 transition w-full sm:w-auto">
-                        <UserPlus size={16} /> Follow
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
           </div>
         </div>
       </div>
