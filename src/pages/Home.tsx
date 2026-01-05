@@ -12,6 +12,7 @@ import {
   Building2,
   UserPlus,
 } from "lucide-react";
+import TopCompaniesStrip from "../components/TopCompaniesStrip";
 
 const categories = [
   "IT Staffing",
@@ -128,7 +129,7 @@ export default function Home() {
       {/* MAIN CONTENT */}
       <div className="container-x mt-8 relative z-10">
         <StatPills />
-
+<TopCompaniesStrip />
         <div className="mt-8 md:mt-10 grid gap-6 lg:grid-cols-3">
           {/* left */}
           <div className="lg:col-span-2 space-y-6 min-w-0">

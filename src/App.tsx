@@ -6,10 +6,13 @@ import Home from "./pages/Home";
 import Jobs from "./pages/Jobs";
 import JobDetails from "./pages/JobDetails";
 import Auth from "./pages/Auth";
-
+import PayrollServices from "./pages/services/Payroll";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-
+import ITStaffing from "./pages/services/ItStaffing";
+import Recruitment from "./pages/services/Recruitment";
+import StaffingSolutions from "./pages/services/StaffingSolutions";
+import ForgotPassword from "./pages/ForgotPassword";
 import CandidateShell from "./components/CandidateShell";
 import CandidateHome from "./pages/candidate/CandidateHome";
 import CandidateProfile from "./pages/candidate/CandidateProfile";
@@ -51,6 +54,12 @@ export default function App() {
         {/* Employer + Admin */}
         <Route path="/employer" element={<EmployerDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        // routes.tsx (or App routes)
+<Route path="/services/payroll" element={<PayrollServices />} />
+<Route path="/services/it-staffing" element={<ITStaffing />} />
+<Route path="/services/recruitment" element={<Recruitment />} />
+<Route path="/services/staffing-solutions" element={<StaffingSolutions />} /> 
+<Route path="/forgot-password" element={<ForgotPassword />} />
 <Route path="/services/customer-care-training" element={<CustomerTraining />} />
         {/* Services */}
         <Route path="/services/:slug" element={<ServiceDetail />} />
