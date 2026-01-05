@@ -10,7 +10,6 @@ import {
   ArrowRight,
   BadgeCheck,
   Building2,
-  UserPlus,
 } from "lucide-react";
 import TopCompaniesStrip from "../components/TopCompaniesStrip";
 
