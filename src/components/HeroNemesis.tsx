@@ -165,108 +165,113 @@ export default function HeroNemesis() {
             <div className="absolute -inset-6 rounded-[42px] bg-white/6 border border-white/12" />
             <div className="relative p-6 md:p-8">
               <div className="grid grid-cols-2 gap-4">
-                {/* Training */}
-               <Hex>
-  <div className="relative h-40 md:h-44">
-    <img
-      src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80"
-      alt="Training & Development"
-      className="h-full w-full object-cover"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      crossOrigin="anonymous"
-    />
-    <div className="absolute inset-0 bg-black/35" />
-    <div className="absolute bottom-3 left-3 right-3">
-      <div className="text-white font-extrabold">Training & Development</div>
-      <div className="text-white/80 text-xs">Soft Skills • Customer Care</div>
-    </div>
-  </div>
-</Hex>
-
-                {/* HR */}
-                <Hex>
-  <div className="relative h-40 md:h-44">
-    <img
-      src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"
-      alt="HR Services"
-      className="h-full w-full object-cover"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      crossOrigin="anonymous"
-    />
-    <div className="absolute inset-0 bg-black/35" />
-    <div className="absolute bottom-3 left-3 right-3">
-      <div className="text-white font-extrabold">HR Services</div>
-      <div className="text-white/80 text-xs">Payroll • Compliance • Consulting</div>
-    </div>
-  </div>
-</Hex>
-
-
-                {/* Recruitment wide */}
-                {/* Training */}
-<Hex>
-  <div className="relative h-40 md:h-44">
-    <img
-      src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80"
-      alt="Training & Development"
-      className="h-full w-full object-cover"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      crossOrigin="anonymous"
-    />
-    <div className="absolute inset-0 bg-black/35" />
-    <div className="absolute bottom-3 left-3 right-3">
-      <div className="text-white font-extrabold">Training & Development</div>
-      <div className="text-white/80 text-xs">Soft Skills • Customer Care</div>
-    </div>
-  </div>
-</Hex>
-
-{/* HR */}
-<Hex>
-  <div className="relative h-40 md:h-44">
-    <img
-      src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"
-      alt="HR Services"
-      className="h-full w-full object-cover"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      crossOrigin="anonymous"
-    />
-    <div className="absolute inset-0 bg-black/35" />
-    <div className="absolute bottom-3 left-3 right-3">
-      <div className="text-white font-extrabold">HR Services</div>
-      <div className="text-white/80 text-xs">Payroll • Compliance • Consulting</div>
-    </div>
-  </div>
-</Hex>
-
-{/* Recruitment wide */}
-<div className="col-span-2">
+  {/* Training & Development */}
   <Hex>
-    <div className="relative h-44 md:h-48">
+    <div className="relative h-40 md:h-44">
       <img
-        src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80"
-        alt="Recruitment & Staffing"
+        src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80"
+        alt="Training & Development"
         className="h-full w-full object-cover"
         loading="lazy"
         referrerPolicy="no-referrer"
         crossOrigin="anonymous"
       />
-      <div className="absolute inset-0 bg-black/40" />
-      <div className="absolute bottom-4 left-4 right-4">
-        <div className="text-white font-extrabold text-lg">Recruitment & Staffing</div>
-        <div className="text-white/80 text-sm">
-          IT Staffing • Bulk Hiring • Executive Search
-        </div>
+      <div className="absolute inset-0 bg-black/35" />
+      <div className="absolute bottom-3 left-3 right-3">
+        <div className="text-white font-extrabold">Training & Development</div>
+        <div className="text-white/80 text-xs">Soft Skills • Customer Care</div>
       </div>
     </div>
   </Hex>
+
+  {/* HR Services */}
+  <Hex>
+    <div className="relative h-40 md:h-44">
+      <img
+        src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"
+        alt="HR Services"
+        className="h-full w-full object-cover"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
+      />
+      <div className="absolute inset-0 bg-black/35" />
+      <div className="absolute bottom-3 left-3 right-3">
+        <div className="text-white font-extrabold">HR Services</div>
+        <div className="text-white/80 text-xs">Payroll • Compliance • Consulting</div>
+      </div>
+    </div>
+  </Hex>
+
+  {/* Payroll & Compliance */}
+  <Hex>
+    <div className="relative h-40 md:h-44">
+      <img
+        src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1200&q=80"
+        alt="Payroll & Compliance"
+        className="h-full w-full object-cover"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
+      />
+      <div className="absolute inset-0 bg-black/35" />
+      <div className="absolute bottom-3 left-3 right-3">
+        <div className="text-white font-extrabold">Payroll & Compliance</div>
+        <div className="text-white/80 text-xs">PF/ESI • Audits • Statutory</div>
+      </div>
+    </div>
+  </Hex>
+
+  {/* IT Staffing */}
+<Hex>
+  <div className="relative h-40 md:h-44">
+    <img
+      src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80"
+      alt="IT Staffing"
+      className="h-full w-full object-cover"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      crossOrigin="anonymous"
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).src =
+          "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80";
+      }}
+    />
+    <div className="absolute inset-0 bg-black/35" />
+    <div className="absolute bottom-3 left-3 right-3">
+      <div className="text-white font-extrabold">IT Staffing</div>
+      <div className="text-white/80 text-xs">
+        Developers • Support • Infrastructure
+      </div>
+    </div>
+  </div>
+</Hex>
+
+
+  {/* Recruitment & Staffing (wide) */}
+  <div className="col-span-2">
+    <Hex>
+      <div className="relative h-44 md:h-48">
+        <img
+          src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80"
+          alt="Recruitment & Staffing"
+          className="h-full w-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute bottom-4 left-4 right-4">
+          <div className="text-white font-extrabold text-lg">Recruitment & Staffing</div>
+          <div className="text-white/80 text-sm">
+            Bulk Hiring • Executive Search • Pan-India
+          </div>
+        </div>
+      </div>
+    </Hex>
+  </div>
 </div>
 
-              </div>
 
               {/* Feature strip */}
               <div className="mt-5 rounded-3xl bg-[#1F4F8F]/55 border border-[#8FB1DA]/35 p-4">
