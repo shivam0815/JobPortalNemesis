@@ -3,321 +3,196 @@ const card =
 
 export default function PrivacyPolicy() {
   return (
-    <main className="container-x py-10">
+    <main className="container-x py-10 space-y-6">
+      {/* Header */}
       <section className={card}>
         <h1 className="text-2xl md:text-3xl font-extrabold">
-          Privacy Policy
+          Privacy Policy – Nemesis Group
         </h1>
         <p className="text-white/70 mt-2">
+          This Privacy Policy explains how Nemesis Group collects, uses, stores,
+          discloses, and protects personal information across its platforms and
+          services.
+        </p>
+        <p className="text-white/60 mt-1 text-sm">
           Last Updated: 02/01/2026
         </p>
       </section>
 
-      <section className={"mt-6 " + card}>
-        <div className="space-y-4 text-sm text-white/80 leading-relaxed">
+      {/* Content */}
+      <section className={card}>
+        <div className="space-y-6 text-sm text-white/80 leading-relaxed">
+          <div>
+            <div className="font-extrabold text-white">
+              1. Scope of This Policy
+            </div>
+            <p className="mt-1 text-white/75">
+              This Privacy Policy applies to website visitors, job applicants,
+              candidates, trainees, associate employees, consultants, clients,
+              business partners, and users of Nemesis Group’s recruitment,
+              staffing, payroll, compliance, and training services.
+            </p>
+          </div>
 
-          <p>
-            Nemesis Group (“we”, “our”, “us”) is committed to protecting the
-            privacy, confidentiality, and security of personal information
-            belonging to our clients, candidates, trainees, associate employees,
-            partners, and website users. This Privacy Policy explains how we
-            collect, use, store, disclose, and protect personal information in
-            accordance with applicable laws in India, including the Information
-            Technology Act, 2000 and relevant data protection rules.
-          </p>
+          <div>
+            <div className="font-extrabold text-white">
+              2. Information We Collect
+            </div>
+            <p className="mt-1 text-white/75">
+              We may collect personal information including name, contact
+              details, educational qualifications, employment history,
+              resume/CV data, identity and KYC documents (where legally
+              required), bank details for payroll or fee processing, training
+              records, assessment results, and professional recruitment data.
+            </p>
+            <p className="mt-2 text-white/75">
+              We also collect technical information such as IP address, browser
+              type, device information, usage data, cookies, and encrypted
+              login credentials.
+            </p>
+          </div>
 
-          <p>
-            By accessing our website, job portal, mobile applications, training
-            platforms, or availing our services, you agree to the terms of this
-            Privacy Policy.
-          </p>
+          <div>
+            <div className="font-extrabold text-white">
+              3. Purpose of Information Collection
+            </div>
+            <p className="mt-1 text-white/75">
+              Personal information is collected and used for recruitment and
+              staffing services, workforce placement, training program delivery,
+              payroll processing, statutory compliance, candidate verification,
+              client service delivery, communication, legal compliance, and
+              improvement of our platforms and services.
+            </p>
+          </div>
 
-          <p className="font-extrabold text-white">
-            *1. Scope of This Policy*
-          </p>
+          <div>
+            <div className="font-extrabold text-white">4. Consent</div>
+            <p className="mt-1 text-white/75">
+              By submitting personal information to Nemesis Group through any
+              medium, you provide explicit consent for its collection,
+              processing, storage, and use for legitimate business purposes.
+              Consent may be withdrawn subject to legal and contractual
+              obligations.
+            </p>
+          </div>
 
-          <p>This Privacy Policy applies to:</p>
+          <div>
+            <div className="font-extrabold text-white">
+              5. Information Sharing & Disclosure
+            </div>
+            <p className="mt-1 text-white/75">
+              Nemesis Group does not sell or rent personal data. Information may
+              be shared with clients for hiring purposes, government or
+              statutory authorities when required by law, payroll and
+              background verification partners, technology service providers,
+              and internal teams on a need-to-know basis. All third parties are
+              bound by confidentiality obligations.
+            </p>
+          </div>
 
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Website visitors</li>
-            <li>Job applicants and candidates</li>
-            <li>
-              Trainees enrolled in HR, Customer Care, or Banking training programs
-            </li>
-            <li>Associate employees and consultants</li>
-            <li>Clients and business partners</li>
-            <li>
-              Users of our recruitment, staffing, payroll, compliance, and
-              training services
-            </li>
-          </ul>
+          <div>
+            <div className="font-extrabold text-white">
+              6. Data Security Measures
+            </div>
+            <p className="mt-1 text-white/75">
+              We implement reasonable technical, administrative, and
+              organizational safeguards including secure servers, encrypted
+              databases, access controls, and periodic security reviews.
+              However, no system is completely secure.
+            </p>
+          </div>
 
-          <p className="font-extrabold text-white">
-            *2. Information We Collect*
-          </p>
+          <div>
+            <div className="font-extrabold text-white">7. Data Retention</div>
+            <p className="mt-1 text-white/75">
+              Personal data is retained only as long as necessary to fulfill
+              service obligations, comply with legal and regulatory
+              requirements, or for legitimate business purposes. Data is
+              securely deleted or anonymized once no longer required.
+            </p>
+          </div>
 
-          <p>We may collect the following types of information:</p>
+          <div>
+            <div className="font-extrabold text-white">
+              8. Cookies & Tracking Technologies
+            </div>
+            <p className="mt-1 text-white/75">
+              Cookies may be used to improve user experience, analyze traffic,
+              and enhance platform performance. Users may disable cookies
+              through browser settings, though some features may be affected.
+            </p>
+          </div>
 
-          <p className="font-semibold text-white">a) Personal Information</p>
+          <div>
+            <div className="font-extrabold text-white">9. Rights of Users</div>
+            <p className="mt-1 text-white/75">
+              Users have the right to access, correct, update, or request
+              deletion of personal data (subject to applicable laws), withdraw
+              consent, and raise concerns regarding misuse of information.
+            </p>
+          </div>
 
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Full name, date of birth, gender</li>
-            <li>
-              Contact details (phone number, email address, postal address)
-            </li>
-            <li>Educational qualifications and certifications</li>
-            <li>Employment history and work experience</li>
-            <li>Resume/CV details</li>
-            <li>
-              Identity documents (KYC details where required by law)
-            </li>
-            <li>
-              Bank details for payroll, stipend, or fee transactions
-            </li>
-            <li>Training records and assessment results</li>
-          </ul>
+          <div>
+            <div className="font-extrabold text-white">
+              10. Training & Fresher Programs Data
+            </div>
+            <p className="mt-1 text-white/75">
+              Information collected from trainees is used strictly for training,
+              evaluation, certification, and placement assistance. Performance
+              data may be shared with potential employers only with consent.
+              Completion of training does not guarantee employment.
+            </p>
+          </div>
 
-          <p className="font-semibold text-white">
-            b) Professional & Recruitment Information
-          </p>
+          <div>
+            <div className="font-extrabold text-white">
+              11. Third-Party Links
+            </div>
+            <p className="mt-1 text-white/75">
+              Our platforms may contain links to third-party websites. Nemesis
+              Group is not responsible for their privacy practices or content.
+            </p>
+          </div>
 
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Job preferences and career interests</li>
-            <li>Interview records and feedback</li>
-            <li>Skill assessments and background verification details</li>
-            <li>Compliance and statutory information</li>
-          </ul>
+          <div>
+            <div className="font-extrabold text-white">12. Policy Updates</div>
+            <p className="mt-1 text-white/75">
+              Nemesis Group may update this Privacy Policy at any time.
+              Continued use of services constitutes acceptance of the revised
+              policy.
+            </p>
+          </div>
 
-          <p className="font-semibold text-white">
-            c) Technical Information
-          </p>
+          <div>
+            <div className="font-extrabold text-white">
+              13. Contact Information
+            </div>
+            <p className="mt-1 text-white/75">
+              For any questions or requests regarding this Privacy Policy,
+              please contact:
+              <br />
+              <span className="font-semibold text-white">Nemesis Group</span>
+              <br />
+              Email:{" "}
+              <a
+                href="mailto:flexicare@nemesisgroup.in"
+                className="underline text-white"
+              >
+                flexicare@nemesisgroup.in
+              </a>
+            </p>
+          </div>
 
-          <ul className="list-disc pl-6 space-y-1">
-            <li>IP address</li>
-            <li>Browser type and device information</li>
-            <li>Website usage data and cookies</li>
-            <li>
-              Login credentials for portals (securely encrypted)
-            </li>
-          </ul>
-
-          <p className="font-extrabold text-white">
-            3. Purpose of Information Collection
-          </p>
-
-          <p>
-            We collect and use personal information for the following purposes:
-          </p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Recruitment, executive search, and staffing services</li>
-            <li>Temporary and permanent workforce placement</li>
-            <li>
-              Training program enrollment, delivery, and certification
-            </li>
-            <li>Payroll processing and statutory compliance</li>
-            <li>Candidate verification and background checks</li>
-            <li>Client service delivery and workforce management</li>
-            <li>
-              Communication regarding jobs, training, updates, and support
-            </li>
-            <li>Legal, regulatory, and contractual compliance</li>
-            <li>
-              Improving our services, platforms, and user experience
-            </li>
-          </ul>
-
-          <p className="font-extrabold text-white">
-            *4. Consent*
-          </p>
-
-          <p>
-            By submitting your personal information to Nemesis Group through our
-            website, job portal, forms, training programs, or any other medium,
-            you provide your explicit consent for collection, processing,
-            storage, and use of such information for legitimate business
-            purposes.
-          </p>
-
-          <p>
-            You may withdraw consent at any time by contacting us, subject to
-            legal and contractual obligations.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *5. Information Sharing & Disclosure*
-          </p>
-
-          <p>
-            We do not sell or rent personal data. Information may be shared only
-            when necessary, including:
-          </p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Clients for recruitment and staffing purposes</li>
-            <li>
-              Government authorities, statutory bodies, or regulators as
-              required by law
-            </li>
-            <li>
-              Payroll processors, background verification agencies, or
-              compliance partners
-            </li>
-            <li>
-              Technology service providers supporting our platforms
-            </li>
-            <li>Internal teams on a need-to-know basis</li>
-          </ul>
-
-          <p>
-            All third parties are required to maintain strict confidentiality
-            and data security.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *6. Data Security Measures*
-          </p>
-
-          <p>
-            Nemesis Group implements appropriate technical, administrative, and
-            organizational safeguards to protect personal data against:
-          </p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Unauthorized access</li>
-            <li>Data loss or misuse</li>
-            <li>Alteration or disclosure</li>
-          </ul>
-
-          <p>
-            These include secure servers, encrypted databases, restricted
-            access controls, and periodic security reviews.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *7. Data Retention*
-          </p>
-
-          <p>Personal data is retained only for:</p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>As long as required to fulfill service obligations</li>
-            <li>
-              Compliance with legal, regulatory, and statutory requirements
-            </li>
-            <li>Legitimate business purposes</li>
-          </ul>
-
-          <p>
-            Once data is no longer required, it is securely deleted or
-            anonymized.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *8. Cookies & Tracking Technologies*
-          </p>
-
-          <p>Our website and portals may use cookies to:</p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Improve user experience</li>
-            <li>Analyze traffic and usage patterns</li>
-            <li>Enhance platform performance</li>
-          </ul>
-
-          <p>
-            Users may disable cookies through browser settings, though certain
-            features may be limited.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *9. Rights of Users*
-          </p>
-
-          <p>You have the right to:</p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Access your personal data</li>
-            <li>Request correction or updating of information</li>
-            <li>
-              Withdraw consent (subject to legal requirements)
-            </li>
-            <li>Request deletion of data where applicable</li>
-            <li>
-              Raise concerns regarding misuse of personal information
-            </li>
-          </ul>
-
-          <p>
-            Requests can be made by contacting us using the details below.
-          </p>
-
-          <p className="font-extrabold text-white">
-            10. Training & Fresher Programs Data
-          </p>
-
-          <p>
-            For candidates enrolled in HR, Customer Care, and Banking training
-            programs:
-          </p>
-
-          <ul className="list-disc pl-6 space-y-1">
-            <li>
-              Information is used strictly for training, evaluation, placement
-              assistance, and career guidance
-            </li>
-            <li>
-              Training performance data may be shared with potential employers
-              only with consent
-            </li>
-            <li>
-              No guarantees of employment are implied unless explicitly stated
-              in writing
-            </li>
-          </ul>
-
-          <p className="font-extrabold text-white">
-            *11. Third-Party Links*
-          </p>
-
-          <p>
-            Our platforms may contain links to third-party websites. Nemesis
-            Group is not responsible for the privacy practices or content of
-            external websites. Users are advised to review their respective
-            privacy policies.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *12. Policy Updates*
-          </p>
-
-          <p>
-            Nemesis Group reserves the right to modify or update this Privacy
-            Policy at any time. Updates will be posted on our website, and
-            continued use of our services constitutes acceptance of the revised
-            policy.
-          </p>
-
-          <p className="font-extrabold text-white">
-            *13. Contact Information*
-          </p>
-
-          <p>
-            For any questions, concerns, or requests regarding this Privacy
-            Policy or personal data handling, please contact:
-          </p>
-
-          <p className="font-extrabold text-white">
-            *Commitment Statement*
-          </p>
-
-          <p>
+          <div className="border-t border-white/10 pt-4 text-white/70">
+            <span className="font-semibold text-white">
+              Commitment Statement
+            </span>
+            <br />
             At Nemesis Group, trust, transparency, and integrity are the
             foundation of everything we do. We are committed to safeguarding
             personal information while delivering ethical, compliant, and
             value-driven staffing and training solutions across India.
-          </p>
-
+          </div>
         </div>
       </section>
     </main>

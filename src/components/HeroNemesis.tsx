@@ -3,7 +3,7 @@ import { motion, type Transition } from "framer-motion";
 import {
   CheckCircle2,
   Sparkles,
-  
+ 
   Globe,
   Mail,
   ArrowRight,
