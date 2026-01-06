@@ -47,7 +47,7 @@ export default function Jobs() {
             <select
               value={jobType}
               onChange={(e) => setJobType(e.target.value)}
-              className="h-11 rounded-2xl bg-white/8 border border-white/12 px-4 text-sm outline-none"
+              className="h-11 rounded-2xl bg-black/8 border border-white/12 px-4 text-sm outline-none"
             >
               <option>All</option>
               <option>WFH</option>

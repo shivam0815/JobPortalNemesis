@@ -4,8 +4,9 @@ import { Building2 } from "lucide-react";
 const companies = [
   "Airtel",
   "Muthoot Finance",
-  "L&T Finance MSME",
-  "Shakti Purple",
+  "L&T Finance ",
+  "MSME Shakti",
+   "Purple",
   "HDFC",
   "Axis Bank",
   "Kotak",
