@@ -16,6 +16,8 @@ const companies = [
   "SBI Life",
   "ICICI Prudential",
   "Exide Life",
+  "Bank of America",
+  "Alankrit"
 ];
 
 export default function TopCompaniesStrip() {

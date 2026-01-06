@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import TopCompaniesStrip from "../components/TopCompaniesStrip";
 import CustomerCareHiringStrip from "../components/CustomerCareHiringStrip";
+import BackofficeDeliveryWarehouseStrip from "../components/BackofficeDeliveryWarehouseStrip";
 
 /* ---------------- DATA ---------------- */
 
@@ -153,6 +154,7 @@ export default function Home() {
         <StatPills />
         <TopCompaniesStrip />
 <CustomerCareHiringStrip />
+<BackofficeDeliveryWarehouseStrip />
         <div className="mt-8 md:mt-10 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <ServiceCards />
