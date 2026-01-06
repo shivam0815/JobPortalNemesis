@@ -6,7 +6,7 @@ const companies = [
   "Muthoot Finance",
   "L&T Finance ",
   "MSME Shakti",
-   "Purple",
+   "Purple Finance",
   "HDFC",
   "Axis Bank",
   "Kotak",
