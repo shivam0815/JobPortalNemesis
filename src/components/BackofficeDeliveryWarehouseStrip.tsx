@@ -71,7 +71,7 @@ export default function BackofficeDeliveryWarehouseStrip() {
           white-space:nowrap;
           will-change:transform;
           /* ✅ DIFFERENT ANIMATION: faster + slight "wave" feel */
-          animation: bwMarquee 16s linear infinite;
+          animation: bwMarquee 30s linear infinite;
         }
 
         .bw-viewport:hover .bw-track{

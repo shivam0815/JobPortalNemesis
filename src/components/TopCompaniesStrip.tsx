@@ -72,7 +72,7 @@ export default function TopCompaniesStrip() {
           width:max-content;
           white-space:nowrap;
           will-change:transform;
-          animation: tcMarquee 22s linear infinite;
+          animation: tcMarquee 30s linear infinite;
         }
 
         /* pause on hover */

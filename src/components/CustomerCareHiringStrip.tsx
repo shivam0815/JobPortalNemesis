@@ -18,6 +18,12 @@ const companies = [
   "Jet Airways",
   "Chegg",
   "OLX Group",
+  "Amazon Fresh",
+  "BigBasket",
+    "CRED",
+    "Blue Dart Express",
+    "Zomato",
+"Swiggy",
 ];
 
 export default function CustomerCareCompaniesStrip() {
@@ -74,7 +80,7 @@ export default function CustomerCareCompaniesStrip() {
           width:max-content;
           white-space:nowrap;
           will-change:transform;
-          animation: ccMarqueeLTR 24s linear infinite;
+          animation: ccMarqueeLTR 30s linear infinite;
 
         }
 
