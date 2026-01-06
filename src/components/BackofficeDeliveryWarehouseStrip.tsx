@@ -24,7 +24,7 @@ export default function BackofficeDeliveryWarehouseStrip() {
   return (
     <section className="mt-6">
       <h3 className="text-white font-extrabold text-lg mb-3">
-        Hiring In <span className="text-[#EAF2FF]">Backoffice • Delivery • Warehouse</span>
+        <span className="text-[#EAF2FF]">Backoffice • Delivery • Warehouse</span>
       </h3>
 
       <div className="bw-viewport">

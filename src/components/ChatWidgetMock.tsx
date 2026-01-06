@@ -1,6 +1,6 @@
 // src/components/ChatWidgetMock.tsx
-// Product-ready Community card with subtle float + shine + "shuffle" room highlight.
-// No backend changes. Drop-in replace.
+// Product-ready Community card (NO floating movement).
+// Shine + room highlight retained. No backend changes.
 
 import { useEffect, useMemo, useState } from "react";
 import { MessageCircle, UserPlus, Sparkles, ArrowRight } from "lucide-react";
@@ -19,7 +19,7 @@ export default function ChatWidgetMock() {
   const activeRoom = useMemo(() => rooms[active], [active]);
 
   return (
-    <aside className="relative rounded-3xl border border-white/10 bg-white/6 p-6 shadow-card community-float overflow-hidden">
+    <aside className="relative rounded-3xl border border-white/10 bg-white/6 p-6 shadow-card overflow-hidden">
       {/* shine sweep */}
       <span className="pointer-events-none absolute inset-0 rounded-3xl community-shine" />
 
@@ -97,16 +97,8 @@ export default function ChatWidgetMock() {
         </div>
       </div>
 
-      {/* inline CSS animations (no tailwind config required) */}
+      {/* inline CSS (float removed) */}
       <style>{`
-        .community-float{
-          animation: commFloat 6s ease-in-out infinite;
-        }
-        @keyframes commFloat{
-          0%,100%{ transform: translateY(0); }
-          50%{ transform: translateY(-6px); }
-        }
-
         .community-shine{
           background: linear-gradient(
             120deg,
@@ -131,7 +123,7 @@ export default function ChatWidgetMock() {
         }
 
         @media (prefers-reduced-motion: reduce){
-          .community-float, .community-shine, .room-pop{ animation: none !important; }
+          .community-shine, .room-pop{ animation: none !important; }
         }
       `}</style>
     </aside>

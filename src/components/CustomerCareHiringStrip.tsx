@@ -28,7 +28,7 @@ export default function CustomerCareCompaniesStrip() {
     <section className="mt-6">
       {/* HEADING */}
       <h3 className="text-white font-extrabold text-lg mb-3">
-        Hiring Top Companies – <span className="text-[#EAF2FF]">Customer Care</span>
+          <span className="text-[#EAF2FF]">Customer Care</span>
       </h3>
 
       <div className="cc-viewport">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import HeroNemesis from "../components/HeroNemesis";
 import StatPills from "../components/StatPills";
 import ServiceCards from "../components/ServiceCards";
@@ -34,14 +34,6 @@ const topCompanies = [
   { name: "Tech Hiring Hub", tag: "IT Staffing", city: "Bangalore", verified: false },
 ];
 
-/* Floating community positions (desktop only) */
-const COMMUNITY_POSITIONS = [
-  "top-[140px] right-6",
-  "top-[420px] right-6",
-  "bottom-32 right-6",
-  "bottom-32 left-6",
-];
-
 /* ---------------- PAGE ---------------- */
 
 export default function Home() {
@@ -49,16 +41,6 @@ export default function Home() {
   const [city, setCity] = useState("");
   const [exp, setExp] = useState("All");
   const [mode, setMode] = useState("All");
-
-  /* community floating position */
-  const [communityPos, setCommunityPos] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setCommunityPos((p) => (p + 1) % COMMUNITY_POSITIONS.length);
-    }, 4500);
-    return () => clearInterval(t);
-  }, []);
 
   const searchHint = useMemo(() => {
     const parts = [
@@ -153,9 +135,11 @@ export default function Home() {
       <div className="container-x mt-8 relative z-10">
         <StatPills />
         <TopCompaniesStrip />
-<CustomerCareHiringStrip />
-<BackofficeDeliveryWarehouseStrip />
+        <CustomerCareHiringStrip />
+        <BackofficeDeliveryWarehouseStrip />
+
         <div className="mt-8 md:mt-10 grid gap-6 lg:grid-cols-3">
+          {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
             <ServiceCards />
 
@@ -170,8 +154,13 @@ export default function Home() {
             </section>
           </div>
 
-          {/* RIGHT COLUMN (static content only) */}
+          {/* RIGHT */}
           <div className="lg:col-span-1 space-y-6">
+            {/* ✅ Community card (NOT moving) */}
+            <div className="hidden lg:block sticky top-24">
+              <ChatWidgetMock />
+            </div>
+
             {/* Animated Top Companies */}
             <section className="rounded-3xl border border-[#8FB1DA]/40 bg-[#1F4F8F]/90 shadow-card p-5">
               <h3 className="text-xl font-extrabold text-white">Top Companies</h3>
@@ -199,7 +188,7 @@ export default function Home() {
                         </div>
 
                         {c.verified && (
-                          <span className="text-xs px-2 py-1 rounded-full bg-white/10 border border-white/12 text-white">
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-white/10 border border-white/12 text-white">
                             <BadgeCheck size={14} /> Verified
                           </span>
                         )}
@@ -215,17 +204,6 @@ export default function Home() {
             </section>
           </div>
         </div>
-      </div>
-
-      {/* FLOATING COMMUNITY CARD (DESKTOP ONLY) */}
-      <div
-        className={`
-          hidden lg:block fixed z-40 w-[340px]
-          transition-all duration-700 ease-in-out
-          ${COMMUNITY_POSITIONS[communityPos]}
-        `}
-      >
-        <ChatWidgetMock />
       </div>
 
       {/* CTA */}
