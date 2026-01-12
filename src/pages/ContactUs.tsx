@@ -47,7 +47,7 @@ export default function ContactUs() {
               <Phone size={18} className="mt-0.5" />
               <div>
                 <div className="font-semibold">Phone</div>
-                <div className="text-sm text-white/75">+91-9999999999</div>
+                <div className="text-sm text-white/75">02269718673</div>
               </div>
             </div>
 

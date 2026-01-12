@@ -7,34 +7,27 @@ import type {
 } from "axios";
 
 export const API_BASE =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8001";
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"; // ✅ 8000
 
 export const api: AxiosInstance = axios.create({
-  baseURL: `${API_BASE}/api`,
+  baseURL: `${API_BASE}/api`, // ✅ correct: http://127.0.0.1:8000/api
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
   },
+  timeout: 20000,
 });
 
-/**
- * Request interceptor (Axios v1 compatible)
- */
+/** Request interceptor */
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     const token = localStorage.getItem("jp_token");
-
-    if (token) {
-      // headers is guaranteed to exist in InternalAxiosRequestConfig
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   }
 );
 
-/**
- * Response interceptor
- */
+/** Response interceptor */
 api.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => response,
   (error: AxiosError) => {
@@ -46,3 +39,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export default api;

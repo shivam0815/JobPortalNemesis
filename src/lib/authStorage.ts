@@ -4,18 +4,24 @@ export type User = {
   email: string;
   avatar?: string | null;
   role?: "candidate" | "employer" | "admin" | null;
+  company_name?: string | null; // optional
 };
 
 export function setAuth(token: string, user: User) {
   localStorage.setItem("jp_token", token);
   localStorage.setItem("jp_user", JSON.stringify(user));
   localStorage.setItem("jp_role", user.role || "");
+
+  // 🔔 notify UI (Navbar etc.)
+  window.dispatchEvent(new Event("auth-changed"));
 }
 
 export function clearAuth() {
   localStorage.removeItem("jp_token");
   localStorage.removeItem("jp_user");
   localStorage.removeItem("jp_role");
+
+  window.dispatchEvent(new Event("auth-changed"));
 }
 
 export function getToken() {
