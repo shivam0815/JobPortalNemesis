@@ -39,6 +39,12 @@ export default function Footer() {
                   HR Services
                 </Link>
               </li>
+              <li>
+  <Link to="/nemesis" className="hover:text-white transition">
+    Nemesis
+  </Link>
+</li>
+
             </ul>
           </div>
 

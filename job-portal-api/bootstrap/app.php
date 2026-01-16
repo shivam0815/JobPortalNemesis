@@ -26,8 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // ✅ Route middleware aliases
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-        ]);
+    'role' => \App\Http\Middleware\RoleMiddleware::class,
+    'is_admin' => \App\Http\Middleware\IsAdmin::class,
+]);
+
     })
     ->withExceptions(function ($exceptions) {
         $exceptions->render(function (AuthenticationException $e, $request) {

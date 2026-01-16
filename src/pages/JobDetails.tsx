@@ -1,6 +1,6 @@
 // src/pages/JobDetails.tsx
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   MapPin,
@@ -9,6 +9,10 @@ import {
   Clock,
   UploadCloud,
   ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  ArrowRight,
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -28,7 +32,7 @@ type ApplyForm = {
   full_name: string;
   phone: string;
   email: string;
-  dob: string; // YYYY-MM-DD
+  dob: string;
   gender: string;
 
   current_city: string;
@@ -64,33 +68,15 @@ type ApplyForm = {
   cover_letter: string;
 };
 
-/* ─────────────────────────────────────────────
-   ✅ PRO UI field styles (high contrast on blue)
-────────────────────────────────────────────── */
-const baseField =
-  "w-full h-11 rounded-2xl px-4 text-[14px] " +
-  "bg-white/12 border border-white/18 text-white placeholder-white/55 " +
-  "shadow-[0_8px_22px_rgba(0,0,0,0.18)] " +
-  "focus:outline-none focus:border-white/35 focus:bg-white/14 focus:ring-2 focus:ring-white/12 " +
-  "transition";
+const card = "rounded-3xl border border-white/12 bg-white/6 shadow-card";
+const soft = "rounded-3xl border border-white/10 bg-white/5";
 
-const input = baseField;
-
+const input =
+  "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
 const select =
-  baseField +
-  " appearance-none pr-10 " +
-  " [&>option]:text-slate-900 [&>option]:bg-white";
-
+  "h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
 const textarea =
-  "w-full min-h-[110px] rounded-2xl px-4 py-3 text-[14px] " +
-  "bg-white/12 border border-white/18 text-white placeholder-white/55 " +
-  "shadow-[0_8px_22px_rgba(0,0,0,0.18)] " +
-  "focus:outline-none focus:border-white/35 focus:bg-white/14 focus:ring-2 focus:ring-white/12 " +
-  "transition resize-y";
-
-const sectionTitle = "text-[11px] font-semibold tracking-[0.12em] text-white/75 uppercase";
-const sectionWrap = "rounded-2xl border border-white/12 bg-white/6 p-4 sm:p-5";
-const label = "text-xs text-white/70 mb-1";
+  "min-h-[110px] w-full rounded-2xl bg-white border border-white/20 px-4 py-3 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25 resize-y";
 
 const fmtMoney = (n?: number | null) => {
   if (n === null || n === undefined) return "";
@@ -118,8 +104,29 @@ const parseSkills = (text: string) =>
     .filter(Boolean)
     .slice(0, 50);
 
+const Chip = ({
+  tone = "neutral",
+  children,
+}: {
+  tone?: "neutral" | "good" | "warn";
+  children: React.ReactNode;
+}) => {
+  const cls =
+    tone === "good"
+      ? "bg-emerald-500/15 border-emerald-300/25 text-emerald-50"
+      : tone === "warn"
+      ? "bg-amber-500/15 border-amber-300/25 text-amber-50"
+      : "bg-white/10 border-white/15 text-white";
+  return (
+    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-extrabold ${cls}`}>
+      {children}
+    </span>
+  );
+};
+
 export default function JobDetails() {
   const { id } = useParams();
+  const nav = useNavigate();
 
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,7 +135,6 @@ export default function JobDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [applied, setApplied] = useState(false);
   const [formMsg, setFormMsg] = useState<string | null>(null);
-
   const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   const [f, setF] = useState<ApplyForm>({
@@ -185,6 +191,7 @@ export default function JobDetails() {
         const loc = res.data?.location ?? "";
         if (loc) setF((p) => ({ ...p, preferred_job_location: loc }));
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.log("JOB DETAILS API ERROR:", e);
         setErrMsg("Job not found / failed to load");
         setJob(null);
@@ -197,7 +204,6 @@ export default function JobDetails() {
   const ui = useMemo(() => {
     const j = job;
     if (!j) return null;
-
     return {
       title: j.title ?? "Untitled Job",
       type: j.job_type ?? "—",
@@ -208,22 +214,30 @@ export default function JobDetails() {
     };
   }, [job]);
 
+  const completion = useMemo(() => {
+    const checks = [
+      !!f.full_name.trim(),
+      !!f.phone.trim(),
+      !!f.email.trim(),
+      !!f.dob.trim(),
+      !!f.current_city.trim(),
+      !!f.state.trim(),
+      !!f.pincode.trim(),
+      !!f.current_address.trim(),
+      !!resumeFile,
+      !!f.declaration_accepted,
+      !!f.privacy_policy_accepted,
+      !!f.consent_contact,
+    ];
+    const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+    return { score };
+  }, [f, resumeFile]);
+
   const canSubmit =
     !!id &&
     !submitting &&
     !applied &&
-    f.full_name.trim() &&
-    f.phone.trim() &&
-    f.email.trim() &&
-    f.dob.trim() &&
-    f.current_city.trim() &&
-    f.state.trim() &&
-    f.pincode.trim() &&
-    f.current_address.trim() &&
-    !!resumeFile &&
-    f.declaration_accepted &&
-    f.privacy_policy_accepted &&
-    f.consent_contact;
+    completion.score === 100;
 
   const submitApplication = async () => {
     if (!id) return;
@@ -286,8 +300,9 @@ export default function JobDetails() {
       });
 
       setApplied(true);
-      setFormMsg("✅ Application submitted successfully");
+      setFormMsg("Application submitted successfully");
     } catch (e: any) {
+      // eslint-disable-next-line no-console
       console.log("APPLY ERROR:", e);
       const msg =
         e?.response?.data?.message ||
@@ -300,551 +315,416 @@ export default function JobDetails() {
     }
   };
 
-  return (
-    <main className="container-x py-10">
-      {/* outer shell */}
-      <div className="rounded-3xl border border-white/12 bg-white/5 shadow-card p-6 md:p-8">
-        <div className="flex items-center justify-between gap-3">
+  if (loading) {
+    return (
+      <main className="container-x py-10">
+        <div className={card + " p-6 md:p-8"}>
+          <div className="text-white/75">Loading…</div>
+        </div>
+      </main>
+    );
+  }
+
+  if (errMsg || !ui) {
+    return (
+      <main className="container-x py-10">
+        <div className={card + " p-6 md:p-8"}>
           <Link to="/jobs" className="inline-flex items-center gap-2 text-white/80 hover:text-white">
             <ArrowLeft size={18} /> Back to Jobs
           </Link>
-
-          <div className="hidden md:flex items-center gap-2 text-xs text-white/70">
-            <ShieldCheck size={16} className="opacity-80" />
-            Secure application • No spam
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="mt-6 text-white/75">Loading…</div>
-        ) : errMsg || !ui ? (
           <div className="mt-6 rounded-2xl border border-white/12 bg-white/5 p-6 text-white/80">
             {errMsg ?? "No job data"}
           </div>
-        ) : (
-          <div className="mt-5 flex flex-col lg:flex-row lg:items-start gap-6">
-            {/* LEFT: JOB */}
-            <div className="flex-1 min-w-0">
-              {/* Title card */}
-              <div className="rounded-3xl border border-white/12 bg-white/6 p-6 backdrop-blur-xl shadow-[0_18px_55px_rgba(0,0,0,0.20)]">
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{ui.title}</h1>
+        </div>
+      </main>
+    );
+  }
 
-                <div className="mt-3 flex flex-wrap gap-2 text-sm text-white/80">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/8 border border-white/12 px-3 py-1.5">
-                    <Briefcase size={16} /> {ui.type}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/8 border border-white/12 px-3 py-1.5">
-                    <BadgeIndianRupee size={16} /> {ui.salary}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/8 border border-white/12 px-3 py-1.5">
-                    <MapPin size={16} /> {ui.location}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/8 border border-white/12 px-3 py-1.5">
-                    <Clock size={16} /> {ui.exp}
-                  </span>
+  return (
+    <main className="container-x py-10">
+      <div className="grid gap-6">
+        {/* HEADER / HERO (matches other pages) */}
+        <section className={card + " p-6 md:p-8"}>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => nav(-1)}
+                  className="inline-flex items-center gap-2 text-white/80 hover:text-white"
+                >
+                  <ArrowLeft size={18} /> Back
+                </button>
+
+                <div className="hidden md:flex items-center gap-2 text-xs text-white/70">
+                  <ShieldCheck size={16} className="opacity-80" />
+                  Secure application • No spam
                 </div>
               </div>
 
-              {/* Description + meta */}
-              <div className="mt-5 rounded-3xl bg-white/5 border border-white/12 p-5 md:p-6">
-                <div className="font-extrabold text-lg">Job Description</div>
-                <p className="text-white/75 text-sm mt-2 leading-relaxed">
-                  {ui.desc || "—"}
-                </p>
+              <h1 className="mt-4 text-2xl md:text-3xl font-extrabold tracking-tight">
+                {ui.title}
+              </h1>
 
-                <div className="mt-5 grid md:grid-cols-2 gap-3 text-sm">
-                  {[
-                    ["Job Title", ui.title],
-                    ["Job Type", ui.type],
-                    ["Experience", ui.exp],
-                    ["Salary", ui.salary],
-                    ["Location", ui.location],
-                    ["Status", "Open"],
-                  ].map(([k, v]) => (
-                    <div
-                      key={k}
-                      className="rounded-2xl bg-white/6 border border-white/12 px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
-                    >
-                      <div className="text-white/65 text-[11px] tracking-wide">{k}</div>
-                      <div className="font-semibold">{v}</div>
-                    </div>
-                  ))}
-                </div>
+              <p className="text-white/70 mt-1 text-sm md:text-base">
+                Fill details once, apply fast. Track status in Candidate Dashboard.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Chip tone="neutral">
+                  <Briefcase size={14} /> {ui.type}
+                </Chip>
+                <Chip tone="neutral">
+                  <BadgeIndianRupee size={14} /> {ui.salary}
+                </Chip>
+                <Chip tone="neutral">
+                  <MapPin size={14} /> {ui.location}
+                </Chip>
+                <Chip tone="neutral">
+                  <Clock size={14} /> {ui.exp}
+                </Chip>
+
+                <Chip tone={completion.score === 100 ? "good" : "warn"}>
+                  {completion.score === 100 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  {completion.score}% form complete
+                </Chip>
               </div>
             </div>
 
-            {/* RIGHT: APPLY */}
-            <aside className="lg:w-[460px] w-full lg:sticky lg:top-6">
-              <div className="rounded-3xl bg-white/6 border border-white/14 p-6 backdrop-blur-xl shadow-[0_18px_55px_rgba(0,0,0,0.25)]">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-lg font-extrabold">Apply Now</div>
-                    <p className="text-white/75 text-sm mt-1">
-                      Fill details + upload resume. Track status in your dashboard.
-                    </p>
-                  </div>
-                  <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 border border-white/12">
-                    <UploadCloud size={18} className="text-white/85" />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                to="/candidate"
+                className="px-5 py-3 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold inline-flex items-center justify-center gap-2"
+              >
+                My Dashboard <ArrowRight size={18} />
+              </Link>
+
+              <button
+                onClick={submitApplication}
+                disabled={!canSubmit}
+                className={
+                  "px-5 py-3 rounded-full font-extrabold transition inline-flex items-center justify-center gap-2 " +
+                  (!canSubmit
+                    ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed"
+                    : "bg-white text-[#061433] hover:opacity-95")
+                }
+              >
+                {submitting ? "Submitting..." : applied ? "Applied" : "Apply Now"}
+              </button>
+            </div>
+          </div>
+
+          {formMsg ? (
+            <div className="mt-4 rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white/90">
+              <span className="inline-flex items-center gap-2">
+                {applied ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                {formMsg}
+              </span>
+            </div>
+          ) : null}
+        </section>
+
+        {/* CONTENT GRID */}
+        <div className="grid lg:grid-cols-[1.25fr_1fr] gap-6">
+          {/* LEFT: DETAILS */}
+          <section className={card + " p-6"}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-extrabold">Job Details</div>
+                <div className="text-sm text-white/65 mt-1">Read carefully before applying.</div>
+              </div>
+              <Chip tone="neutral">
+                <FileText size={14} /> Open
+              </Chip>
+            </div>
+
+            <div className="mt-5 grid md:grid-cols-2 gap-3">
+              {[
+                ["Job Type", ui.type],
+                ["Experience", ui.exp],
+                ["Salary", ui.salary],
+                ["Location", ui.location],
+              ].map(([k, v]) => (
+                <div key={k} className={soft + " px-4 py-3"}>
+                  <div className="text-white/65 text-[11px] tracking-wide">{k}</div>
+                  <div className="font-semibold">{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-3xl bg-white/5 border border-white/12 p-5">
+              <div className="font-extrabold">Job Description</div>
+              <p className="text-white/75 text-sm mt-2 leading-relaxed">
+                {ui.desc || "—"}
+              </p>
+            </div>
+
+            <div className="mt-5 rounded-3xl bg-white/5 border border-white/12 p-5 text-sm text-white/75">
+              Tip: Profile + Resume complete = higher shortlist chances.
+            </div>
+          </section>
+
+          {/* RIGHT: APPLY FORM */}
+          <aside className="lg:sticky lg:top-6">
+            <section className={card + " p-6"}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-lg font-extrabold">Apply Form</div>
+                  <div className="text-sm text-white/65 mt-1">
+                    Required fields are marked *
                   </div>
                 </div>
-
-                {formMsg && (
-                  <div className="mt-4 rounded-2xl border border-white/14 bg-white/8 px-4 py-3 text-sm text-white/90">
-                    {formMsg}
-                  </div>
-                )}
-
-                <div className="mt-5 grid gap-4">
-                  {/* PERSONAL */}
-                  <div className={sectionWrap}>
-                    <div className={sectionTitle}>Personal details</div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Full Name *</div>
-                        <input
-                          className={input}
-                          placeholder="Enter full name"
-                          value={f.full_name}
-                          onChange={(e) => setF((p) => ({ ...p, full_name: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>Mobile Number *</div>
-                        <input
-                          className={input}
-                          placeholder="Enter mobile number"
-                          value={f.phone}
-                          onChange={(e) => setF((p) => ({ ...p, phone: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3">
-                      <div className={label}>Email ID *</div>
-                      <input
-                        className={input}
-                        placeholder="Enter email"
-                        value={f.email}
-                        onChange={(e) => setF((p) => ({ ...p, email: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Date of Birth *</div>
-                        <input
-                          className={input}
-                          type="date"
-                          value={f.dob}
-                          onChange={(e) => setF((p) => ({ ...p, dob: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>Gender (optional)</div>
-                        <select
-                          className={select}
-                          value={f.gender}
-                          onChange={(e) => setF((p) => ({ ...p, gender: e.target.value }))}
-                        >
-                          <option value="">Select</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                          <option value="Prefer not to say">Prefer not to say</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ADDRESS */}
-                  <div className={sectionWrap}>
-                    <div className={sectionTitle}>Address</div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Current City *</div>
-                        <input
-                          className={input}
-                          placeholder="City"
-                          value={f.current_city}
-                          onChange={(e) => setF((p) => ({ ...p, current_city: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>State *</div>
-                        <input
-                          className={input}
-                          placeholder="State"
-                          value={f.state}
-                          onChange={(e) => setF((p) => ({ ...p, state: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Pincode *</div>
-                        <input
-                          className={input}
-                          placeholder="Pincode"
-                          value={f.pincode}
-                          onChange={(e) => setF((p) => ({ ...p, pincode: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>Preferred Job Location (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Preferred location"
-                          value={f.preferred_job_location}
-                          onChange={(e) =>
-                            setF((p) => ({ ...p, preferred_job_location: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3">
-                      <div className={label}>Current Address *</div>
-                      <input
-                        className={input}
-                        placeholder="House no, street, area"
-                        value={f.current_address}
-                        onChange={(e) => setF((p) => ({ ...p, current_address: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  {/* JOB PREFS */}
-                  <div className={sectionWrap}>
-                    <div className={sectionTitle}>Job preferences</div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Department / Role (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Eg: Customer Support"
-                          value={f.department_role}
-                          onChange={(e) => setF((p) => ({ ...p, department_role: e.target.value }))}
-                        />
-                      </div>
-
-                      <div>
-                        <div className={label}>Employment Type</div>
-                        <select
-                          className={select}
-                          value={f.employment_type}
-                          onChange={(e) =>
-                            setF((p) => ({
-                              ...p,
-                              employment_type: e.target.value as ApplyForm["employment_type"],
-                            }))
-                          }
-                        >
-                          <option value="Full-time">Full-time</option>
-                          <option value="Part-time">Part-time</option>
-                          <option value="Internship">Internship</option>
-                          <option value="Work from Home">Work from Home</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* EDUCATION */}
-                  <div className={sectionWrap}>
-                    <div className={sectionTitle}>Education</div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Highest Qualification</div>
-                        <select
-                          className={select}
-                          value={f.highest_qualification}
-                          onChange={(e) =>
-                            setF((p) => ({
-                              ...p,
-                              highest_qualification:
-                                e.target.value as ApplyForm["highest_qualification"],
-                            }))
-                          }
-                        >
-                          <option value="10th">10th</option>
-                          <option value="12th">12th</option>
-                          <option value="Diploma">Diploma</option>
-                          <option value="Graduate">Graduate</option>
-                          <option value="Post Graduate">Post Graduate</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <div className={label}>Course / Stream (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Eg: B.Com, BA, B.Tech"
-                          value={f.course_stream}
-                          onChange={(e) => setF((p) => ({ ...p, course_stream: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Passing Year (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Eg: 2024"
-                          value={f.passing_year}
-                          onChange={(e) => setF((p) => ({ ...p, passing_year: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>University / Board (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="University / Board"
-                          value={f.university_board}
-                          onChange={(e) =>
-                            setF((p) => ({ ...p, university_board: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* EXPERIENCE */}
-                  <div className={sectionWrap}>
-                    <div className={sectionTitle}>Experience</div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Total Experience</div>
-                        <select
-                          className={select}
-                          value={f.total_experience}
-                          onChange={(e) =>
-                            setF((p) => ({
-                              ...p,
-                              total_experience: e.target.value as ApplyForm["total_experience"],
-                            }))
-                          }
-                        >
-                          <option value="Fresher">Fresher</option>
-                          <option value="0-1 Year">0–1 Year</option>
-                          <option value="1-3 Years">1–3 Years</option>
-                          <option value="3+ Years">3+ Years</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <div className={label}>Notice Period (optional)</div>
-                        <select
-                          className={select}
-                          value={f.notice_period}
-                          onChange={(e) =>
-                            setF((p) => ({
-                              ...p,
-                              notice_period: e.target.value as ApplyForm["notice_period"],
-                            }))
-                          }
-                        >
-                          <option value="">Select</option>
-                          <option value="Immediate">Immediate</option>
-                          <option value="15 Days">15 Days</option>
-                          <option value="30 Days">30 Days</option>
-                          <option value="60 Days">60 Days</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Current Company (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Company name"
-                          value={f.current_company}
-                          onChange={(e) =>
-                            setF((p) => ({ ...p, current_company: e.target.value }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>Current Designation (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Designation"
-                          value={f.current_designation}
-                          onChange={(e) =>
-                            setF((p) => ({ ...p, current_designation: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>Current Salary (CTC) (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Eg: 300000"
-                          value={f.current_salary_ctc}
-                          onChange={(e) =>
-                            setF((p) => ({ ...p, current_salary_ctc: e.target.value }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>Expected Salary (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="Eg: 400000"
-                          value={f.expected_salary}
-                          onChange={(e) => setF((p) => ({ ...p, expected_salary: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SKILLS / LINKS */}
-                  <div className={sectionWrap}>
-                    <div className={sectionTitle}>Skills & links</div>
-
-                    <div className="mt-3">
-                      <div className={label}>Key Skills (comma separated) (optional)</div>
-                      <input
-                        className={input}
-                        placeholder="Eg: Calling, CRM, Excel"
-                        value={f.key_skills_text}
-                        onChange={(e) => setF((p) => ({ ...p, key_skills_text: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                      <div>
-                        <div className={label}>LinkedIn URL (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="https://linkedin.com/in/..."
-                          value={f.linkedin_url}
-                          onChange={(e) => setF((p) => ({ ...p, linkedin_url: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <div className={label}>GitHub URL (optional)</div>
-                        <input
-                          className={input}
-                          placeholder="https://github.com/..."
-                          value={f.github_url}
-                          onChange={(e) => setF((p) => ({ ...p, github_url: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3">
-                      <div className={label}>Portfolio URL (optional)</div>
-                      <input
-                        className={input}
-                        placeholder="https://..."
-                        value={f.portfolio_url}
-                        onChange={(e) => setF((p) => ({ ...p, portfolio_url: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="mt-3">
-                      <div className={label}>Cover Letter (optional)</div>
-                      <textarea
-                        className={textarea}
-                        placeholder="Write a short cover letter..."
-                        value={f.cover_letter}
-                        onChange={(e) => setF((p) => ({ ...p, cover_letter: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  {/* RESUME */}
-                  <div className="rounded-2xl border border-white/12 bg-white/6 p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className={sectionTitle}>Resume upload</div>
-                        <div className="text-xs text-white/70 mt-1">PDF/DOC/DOCX • max 5MB</div>
-                      </div>
-                      <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 flex items-center justify-center">
-                        <UploadCloud size={18} className="text-white/85" />
-                      </div>
-                    </div>
-
-                    <input
-                      className="mt-3 block w-full text-sm text-white/85 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-[#061433] file:font-semibold hover:file:opacity-95"
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-                    />
-
-                    {resumeFile && (
-                      <div className="mt-2 text-xs text-white/75">
-                        Selected: <span className="text-white/95 font-medium">{resumeFile.name}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CONSENT */}
-                  <div className="rounded-2xl border border-white/12 bg-white/6 p-4 sm:p-5 space-y-2 text-sm">
-                    <div className={sectionTitle}>Consent</div>
-
-                    <label className="flex items-start gap-2">
-                      <input
-                        className="mt-1"
-                        type="checkbox"
-                        checked={f.declaration_accepted}
-                        onChange={(e) => setF((p) => ({ ...p, declaration_accepted: e.target.checked }))}
-                      />
-                      <span className="text-white/90">I confirm the above information is true *</span>
-                    </label>
-
-                    <label className="flex items-start gap-2">
-                      <input
-                        className="mt-1"
-                        type="checkbox"
-                        checked={f.privacy_policy_accepted}
-                        onChange={(e) => setF((p) => ({ ...p, privacy_policy_accepted: e.target.checked }))}
-                      />
-                      <span className="text-white/90">I accept Privacy Policy *</span>
-                    </label>
-
-                    <label className="flex items-start gap-2">
-                      <input
-                        className="mt-1"
-                        type="checkbox"
-                        checked={f.consent_contact}
-                        onChange={(e) => setF((p) => ({ ...p, consent_contact: e.target.checked }))}
-                      />
-                      <span className="text-white/90">Consent to contact (Call/WhatsApp/Email) *</span>
-                    </label>
-                  </div>
-
-                  <button
-                    onClick={submitApplication}
-                    disabled={!canSubmit}
-                    className={
-                      "h-11 rounded-full font-semibold transition w-full " +
-                      (!canSubmit
-                        ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed"
-                        : "bg-white text-[#061433] hover:opacity-95 shadow-[0_14px_40px_rgba(0,0,0,0.25)]")
-                    }
-                  >
-                    {submitting ? "Submitting..." : applied ? "Applied" : "Submit Application"}
-                  </button>
-
-                  <div className="text-xs text-white/65">
-                    Note: Notifications can be triggered after status update.
-                  </div>
+                <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
+                  <UploadCloud size={18} className="text-white/85" />
                 </div>
               </div>
-            </aside>
-          </div>
-        )}
+
+              <div className="mt-5 grid gap-4">
+                {/* PERSONAL */}
+                <div className={soft + " p-5"}>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                    Personal
+                  </div>
+
+                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                    <input
+                      className={input}
+                      placeholder="Full Name *"
+                      value={f.full_name}
+                      onChange={(e) => setF((p) => ({ ...p, full_name: e.target.value }))}
+                    />
+                    <input
+                      className={input}
+                      placeholder="Mobile Number *"
+                      value={f.phone}
+                      onChange={(e) =>
+                        setF((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "") }))
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-3">
+                    <input
+                      className={input}
+                      placeholder="Email ID *"
+                      value={f.email}
+                      onChange={(e) => setF((p) => ({ ...p, email: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                    <input
+                      className={input}
+                      type="date"
+                      value={f.dob}
+                      onChange={(e) => setF((p) => ({ ...p, dob: e.target.value }))}
+                    />
+                    <select
+                      className={input}
+                      value={f.gender}
+                      onChange={(e) => setF((p) => ({ ...p, gender: e.target.value }))}
+                    >
+                      <option value="">Gender (optional)</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ADDRESS */}
+                <div className={soft + " p-5"}>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                    Address
+                  </div>
+
+                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                    <input
+                      className={input}
+                      placeholder="Current City *"
+                      value={f.current_city}
+                      onChange={(e) => setF((p) => ({ ...p, current_city: e.target.value }))}
+                    />
+                    <input
+                      className={input}
+                      placeholder="State *"
+                      value={f.state}
+                      onChange={(e) => setF((p) => ({ ...p, state: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                    <input
+                      className={input}
+                      placeholder="Pincode *"
+                      value={f.pincode}
+                      onChange={(e) => setF((p) => ({ ...p, pincode: e.target.value.replace(/[^\d]/g, "") }))}
+                    />
+                    <input
+                      className={input}
+                      placeholder="Preferred Job Location (optional)"
+                      value={f.preferred_job_location}
+                      onChange={(e) => setF((p) => ({ ...p, preferred_job_location: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="mt-3">
+                    <input
+                      className={input}
+                      placeholder="Current Address *"
+                      value={f.current_address}
+                      onChange={(e) => setF((p) => ({ ...p, current_address: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* BASIC PREFS */}
+                <div className={soft + " p-5"}>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                    Preferences
+                  </div>
+
+                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                    <input
+                      className={input}
+                      placeholder="Department / Role (optional)"
+                      value={f.department_role}
+                      onChange={(e) => setF((p) => ({ ...p, department_role: e.target.value }))}
+                    />
+
+                    <div className="relative">
+                      <select
+                        className={select}
+                        value={f.employment_type}
+                        onChange={(e) =>
+                          setF((p) => ({
+                            ...p,
+                            employment_type: e.target.value as ApplyForm["employment_type"],
+                          }))
+                        }
+                      >
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Work from Home">Work from Home</option>
+                      </select>
+                      <Briefcase className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SKILLS + COVER */}
+                <div className={soft + " p-5"}>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                    Skills
+                  </div>
+
+                  <div className="mt-3">
+                    <input
+                      className={input}
+                      placeholder="Key Skills (comma separated) (optional)"
+                      value={f.key_skills_text}
+                      onChange={(e) => setF((p) => ({ ...p, key_skills_text: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="mt-3">
+                    <textarea
+                      className={textarea}
+                      placeholder="Cover Letter (optional)"
+                      value={f.cover_letter}
+                      onChange={(e) => setF((p) => ({ ...p, cover_letter: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* RESUME */}
+                <div className={soft + " p-5"}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                        Resume *
+                      </div>
+                      <div className="text-xs text-white/70 mt-1">PDF/DOC/DOCX • max 5MB</div>
+                    </div>
+                    <Chip tone={resumeFile ? "good" : "warn"}>
+                      {resumeFile ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                      {resumeFile ? "Selected" : "Required"}
+                    </Chip>
+                  </div>
+
+                  <input
+                    className="mt-3 block w-full text-sm text-white/85 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-[#061433] file:font-semibold hover:file:opacity-95"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                  />
+
+                  {resumeFile ? (
+                    <div className="mt-2 text-xs text-white/75">
+                      Selected: <span className="text-white/95 font-medium">{resumeFile.name}</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* CONSENT */}
+                <div className={soft + " p-5 space-y-2 text-sm"}>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                    Consent *
+                  </div>
+
+                  <label className="flex items-start gap-2">
+                    <input
+                      className="mt-1"
+                      type="checkbox"
+                      checked={f.declaration_accepted}
+                      onChange={(e) => setF((p) => ({ ...p, declaration_accepted: e.target.checked }))}
+                    />
+                    <span className="text-white/90">I confirm the above information is true</span>
+                  </label>
+
+                  <label className="flex items-start gap-2">
+                    <input
+                      className="mt-1"
+                      type="checkbox"
+                      checked={f.privacy_policy_accepted}
+                      onChange={(e) => setF((p) => ({ ...p, privacy_policy_accepted: e.target.checked }))}
+                    />
+                    <span className="text-white/90">I accept Privacy Policy</span>
+                  </label>
+
+                  <label className="flex items-start gap-2">
+                    <input
+                      className="mt-1"
+                      type="checkbox"
+                      checked={f.consent_contact}
+                      onChange={(e) => setF((p) => ({ ...p, consent_contact: e.target.checked }))}
+                    />
+                    <span className="text-white/90">Consent to contact (Call/WhatsApp/Email)</span>
+                  </label>
+                </div>
+
+                {/* SUBMIT */}
+                <button
+                  onClick={submitApplication}
+                  disabled={!canSubmit}
+                  className={
+                    "h-11 rounded-full font-extrabold transition w-full " +
+                    (!canSubmit
+                      ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed"
+                      : "bg-white text-[#061433] hover:opacity-95")
+                  }
+                >
+                  {submitting ? "Submitting..." : applied ? "Applied" : "Submit Application"}
+                </button>
+
+                <div className="text-xs text-white/65">
+                  Note: Skills will be saved as: {parseSkills(f.key_skills_text).slice(0, 5).join(", ") || "—"}
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
       </div>
     </main>
   );

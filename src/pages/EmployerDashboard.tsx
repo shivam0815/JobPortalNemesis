@@ -1,11 +1,10 @@
 // src/pages/EmployerDashboard.tsx
-import { useMemo, useState, useEffect } from "react";
-import { api } from "../lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Building2,
   Briefcase,
   Users,
-  FileText,
   BadgeCheck,
   Search,
   Filter,
@@ -19,22 +18,80 @@ import {
   ShieldCheck,
   X,
   Plus,
+  FileText,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import type { User } from "../lib/authStorage";
 import type { LucideIcon } from "lucide-react";
+import { api } from "../lib/api";
+import type { User } from "../lib/authStorage";
 
-type ApplicantStatus = "Applied" | "Selected" | "Rejected";
+/**
+ * ✅ WHY APPLICANTS NOT SHOWING?
+ * Your current EmployerDashboard uses MOCK applicants:
+ *   const [applicants, setApplicants] = useState([{...},{...}])
+ * So backend applications never load.
+ *
+ * This updated file:
+ * 1) Fetches employer jobs
+ * 2) Lets employer select a job
+ * 3) Loads applications from: GET /api/jobs/{jobId}/applications
+ * 4) Updates status via: PATCH /api/applications/{applicationId}/status
+ */
 
-type Applicant = {
+/* ───────────────────────────────── Types ───────────────────────────────── */
+
+type Tab = "overview" | "company" | "jobs" | "applicants";
+
+type ApplicantStatusUI = "Applied" | "Selected" | "Rejected" | "Hired";
+type ApplicantStatusAPI = "applied" | "shortlisted" | "rejected" | "hired";
+
+type JobItem = {
+  id: number | string;
+  title?: string;
+  location?: string;
+  job_type?: string;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  total_experience?: string | null;
+};
+
+type ApplicationRow = {
+  id: number | string;
+  status?: ApplicantStatusAPI | string;
+  created_at?: string;
+
+  applied_job_title?: string | null;
+  department_role?: string | null;
+  cover_letter?: string | null;
+  resume_url?: string | null;
+
+  candidate_id?: number | string;
+
+  candidate?: {
+    id?: number | string;
+    name?: string;
+    email?: string;
+  } | null;
+
+  job?: {
+    id?: number | string;
+    title?: string;
+    location?: string;
+  } | null;
+};
+
+type ApplicantRowUI = {
+  applicationId: string;
   name: string;
+  email?: string;
   city: string;
   role: string;
-  status: ApplicantStatus;
+  status: ApplicantStatusUI;
+  resumeUrl?: string | null;
+  createdAt?: string;
 };
 
 const statusMeta: Record<
-  ApplicantStatus,
+  ApplicantStatusUI,
   { pill: string; icon: LucideIcon; row: string; dot: string }
 > = {
   Applied: {
@@ -55,16 +112,64 @@ const statusMeta: Record<
     row: "bg-rose-500/7 border-rose-300/16",
     dot: "bg-rose-300",
   },
+  Hired: {
+    pill: "bg-sky-500/12 border-sky-300/20 text-sky-50",
+    icon: CheckCircle2,
+    row: "bg-sky-500/7 border-sky-300/16",
+    dot: "bg-sky-300",
+  },
 };
 
-const inputBase =
-  "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
-const selectBase =
-  "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
-const textareaBase =
-  "min-h-[120px] w-full rounded-2xl bg-white border border-white/20 px-4 py-3 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
+/* ───────────────────────────────── Small helpers ───────────────────────────────── */
 
-type Tab = "overview" | "company" | "jobs" | "applicants";
+const uiStatusFromApi = (s?: string): ApplicantStatusUI => {
+  const v = (s || "").toLowerCase();
+  if (v === "shortlisted") return "Selected";
+  if (v === "rejected") return "Rejected";
+  if (v === "hired") return "Hired";
+  return "Applied";
+};
+
+const apiStatusFromUi = (s: ApplicantStatusUI): ApplicantStatusAPI => {
+  if (s === "Selected") return "shortlisted";
+  if (s === "Rejected") return "rejected";
+  if (s === "Hired") return "hired";
+  return "applied";
+};
+
+const fmtMoney = (n?: number | null) => {
+  if (n == null) return "";
+  try {
+    return new Intl.NumberFormat("en-IN").format(n);
+  } catch {
+    return String(n);
+  }
+};
+
+const jobSalaryLabel = (j: JobItem) => {
+  const a = j.salary_min != null ? `₹${fmtMoney(j.salary_min)}` : "";
+  const b = j.salary_max != null ? `₹${fmtMoney(j.salary_max)}` : "";
+  if (a && b) return `${a} - ${b}`;
+  return a || b || "—";
+};
+
+const buildPublicFileUrl = (path?: string | null) => {
+  if (!path) return null;
+
+  // if backend already returns full url
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+
+  const base =
+    (import.meta as any)?.env?.VITE_API_URL ||
+    (import.meta as any)?.env?.VITE_API_BASE ||
+    "http://127.0.0.1:8000";
+
+  // Laravel public disk served at /storage/...
+  return `${String(base).replace(/\/$/, "")}/storage/${String(path).replace(
+    /^\/?/,
+    ""
+  )}`;
+};
 
 const makeEmptyJob = () => ({
   title: "",
@@ -74,10 +179,9 @@ const makeEmptyJob = () => ({
   location: "",
   desc: "",
 
-  // ✅ extra fields (PDF)
   job_area: "",
   total_experience: "",
-  monthly_inhand_salary: "", // string input -> number in payload
+  monthly_inhand_salary: "",
   bonus: "No" as "Yes" | "No",
   skills: [] as string[],
 
@@ -90,7 +194,6 @@ const makeEmptyJob = () => ({
   job_timings: "",
   interview_details: "",
 
-  // company/contact (optional)
   company_name: "",
   contact_person_name: "",
   contact_phone: "",
@@ -102,10 +205,141 @@ const makeEmptyJob = () => ({
   job_address: "",
 });
 
+/* ───────────────────────────────── UI components ───────────────────────────────── */
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return <main className="container-x py-8">{children}</main>;
+}
+
+function Chip({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "good" | "bad";
+}) {
+  const cls =
+    tone === "good"
+      ? "bg-emerald-500/15 border-emerald-300/25 text-emerald-50"
+      : tone === "bad"
+      ? "bg-rose-500/12 border-rose-300/20 text-rose-50"
+      : "bg-white/10 border-white/15 text-white";
+  return (
+    <span
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${cls}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  Icon,
+}: {
+  label: string;
+  value: string | number;
+  Icon: any;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-white/70">{label}</div>
+        <div className="h-9 w-9 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
+          <Icon size={16} />
+        </div>
+      </div>
+      <div className="mt-2 text-2xl font-extrabold">{value}</div>
+    </div>
+  );
+}
+
+function Panel({
+  title,
+  subtitle,
+  right,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/6 shadow-card overflow-hidden">
+      <div className="p-5 md:p-6 border-b border-white/10 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-lg md:text-xl font-extrabold">{title}</div>
+          {subtitle ? (
+            <div className="text-sm text-white/65 mt-1">{subtitle}</div>
+          ) : null}
+        </div>
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </div>
+      <div className="p-5 md:p-6">{children}</div>
+    </section>
+  );
+}
+
+function SideItem({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={
+        "w-full text-left px-4 py-3 rounded-2xl border transition font-semibold " +
+        (active
+          ? "bg-white text-[#061433] border-transparent"
+          : "bg-white/6 border-white/10 hover:bg-white/10 text-white/85")
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
+function Accordion({
+  title,
+  desc,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      className="rounded-3xl border border-white/10 bg-white/6 overflow-hidden"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer list-none p-5 flex items-start justify-between gap-3">
+        <div>
+          <div className="font-extrabold">{title}</div>
+          {desc ? <div className="text-sm text-white/65 mt-1">{desc}</div> : null}
+        </div>
+        <div className="text-white/60 text-sm">Expand</div>
+      </summary>
+      <div className="p-5 pt-0">{children}</div>
+    </details>
+  );
+}
+
+/* ───────────────────────────────── Main ───────────────────────────────── */
+
 export default function EmployerDashboard() {
   const nav = useNavigate();
 
-  // 🔐 ROLE GUARD
+  // ROLE GUARD
   useEffect(() => {
     const raw = localStorage.getItem("jp_user");
     if (!raw) {
@@ -126,6 +360,13 @@ export default function EmployerDashboard() {
     }
   }, [nav]);
 
+  const inputBase =
+    "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
+  const selectBase =
+    "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
+  const textareaBase =
+    "min-h-[120px] w-full rounded-2xl bg-white border border-white/20 px-4 py-3 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
+
   const [tab, setTab] = useState<Tab>("overview");
 
   // UI state only
@@ -138,27 +379,31 @@ export default function EmployerDashboard() {
 
   const [job, setJob] = useState(makeEmptyJob);
 
-  // ✅ suggestions state
+  // suggestions state
   const [titleSug, setTitleSug] = useState<string[]>([]);
   const [locSug, setLocSug] = useState<string[]>([]);
   const [areaSug, setAreaSug] = useState<string[]>([]);
 
-  // ✅ skills UI
+  // skills UI
   const [skillInput, setSkillInput] = useState("");
 
-  // ✅ API state
+  // job publish API
   const [posting, setPosting] = useState(false);
   const [postMsg, setPostMsg] = useState<string | null>(null);
 
+  // applicants API
+  const [jobs, setJobs] = useState<JobItem[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [applications, setApplications] = useState<ApplicantRowUI[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsMsg, setAppsMsg] = useState<string | null>(null);
+
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | ApplicantStatus>("All");
+  const [statusFilter, setStatusFilter] =
+    useState<"All" | ApplicantStatusUI>("All");
 
-  const [applicants, setApplicants] = useState<Applicant[]>([
-    { name: "Uzair Ahmad", city: "Delhi", role: "HR Executive", status: "Applied" },
-    { name: "Rafiq Sheikh", city: "Noida", role: "Customer Care", status: "Selected" },
-  ]);
-
-  // ✅ Optional: auto-fill job contact fields from company profile (UI)
+  // auto-fill job contact fields from company profile (UI)
   useEffect(() => {
     setJob((p) => ({
       ...p,
@@ -170,7 +415,7 @@ export default function EmployerDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company.name, company.contact, company.email, company.phone]);
 
-  // ✅ suggestions fetch (debounced)
+  // suggestions fetch (debounced)
   useEffect(() => {
     const t = setTimeout(async () => {
       const q = job.title.trim();
@@ -234,31 +479,146 @@ export default function EmployerDashboard() {
     setJob((p) => ({ ...p, skills: p.skills.filter((s) => s !== v) }));
   };
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return applicants.filter((a) => {
-      const hit =
-        !q ||
-        a.name.toLowerCase().includes(q) ||
-        a.city.toLowerCase().includes(q) ||
-        a.role.toLowerCase().includes(q);
-      const st = statusFilter === "All" || a.status === statusFilter;
-      return hit && st;
-    });
-  }, [applicants, query, statusFilter]);
+  /* ─────────────────────────── Fetch employer jobs ─────────────────────────── */
 
-  const counts = useMemo(() => {
-    const c: Record<ApplicantStatus, number> = { Applied: 0, Selected: 0, Rejected: 0 };
-    applicants.forEach((a) => (c[a.status] += 1));
-    return c;
-  }, [applicants]);
+  const fetchEmployerJobs = async () => {
+    const user = JSON.parse(localStorage.getItem("jp_user") || "null") as User | null;
+    const employer_id = user?.id;
+    if (!employer_id) return;
 
-  const updateStatus = (name: string, next: ApplicantStatus) => {
-    setApplicants((prev) => prev.map((a) => (a.name === name ? { ...a, status: next } : a)));
+    setJobsLoading(true);
+    try {
+      // Try common endpoints (one of these should exist in your backend)
+      // 1) /employer/jobs
+      // 2) /jobs?employer_id=...
+      let res: any = null;
+
+      try {
+        res = await api.get("/employer/jobs");
+      } catch {
+        res = await api.get("/jobs", { params: { employer_id } });
+      }
+
+      const data = res?.data;
+      const list = Array.isArray(data) ? data : (data?.data ?? []);
+      const normalized: JobItem[] = (Array.isArray(list) ? list : []).map((j: any) => ({
+        id: j.id,
+        title: j.title,
+        location: j.location,
+        job_type: j.job_type,
+        salary_min: j.salary_min ?? null,
+        salary_max: j.salary_max ?? null,
+        total_experience: j.total_experience ?? null,
+      }));
+
+      setJobs(normalized);
+
+      // auto-select first job if not selected
+      if (!selectedJobId && normalized.length > 0) {
+        setSelectedJobId(String(normalized[0].id));
+      }
+    } catch (e) {
+      console.log("FETCH JOBS ERROR:", e);
+      setJobs([]);
+    } finally {
+      setJobsLoading(false);
+    }
   };
 
+  // fetch jobs when opening applicants tab
+  useEffect(() => {
+    if (tab === "applicants") fetchEmployerJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  /* ─────────────────────────── Fetch applications for selected job ─────────────────────────── */
+
+  const fetchApplicants = async (jobId: string) => {
+    if (!jobId) return;
+
+    setAppsLoading(true);
+    setAppsMsg(null);
+
+    try {
+      const res = await api.get(`/jobs/${jobId}/applications`);
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (data?.data ?? []);
+
+      const mapped: ApplicantRowUI[] = (Array.isArray(list) ? list : []).map(
+        (a: ApplicationRow) => {
+          const name =
+            a.candidate?.name ||
+            a.applied_job_title || // fallback (not ideal)
+            `Candidate #${String(a.candidate_id ?? "") || "—"}`;
+
+          return {
+            applicationId: String(a.id),
+            name,
+            email: a.candidate?.email || undefined,
+            city: a.job?.location || "—",
+            role: a.department_role || a.job?.title || "—",
+            status: uiStatusFromApi(a.status),
+            resumeUrl: buildPublicFileUrl(a.resume_url),
+            createdAt: a.created_at,
+          };
+        }
+      );
+
+      setApplications(mapped);
+    } catch (e: any) {
+      console.log("FETCH APPS ERROR:", e);
+      setApplications([]);
+      setAppsMsg(e?.response?.data?.message || "Failed to load applicants");
+    } finally {
+      setAppsLoading(false);
+    }
+  };
+
+  // refetch when selected job changes (on applicants tab)
+  useEffect(() => {
+    if (tab !== "applicants") return;
+    if (!selectedJobId) return;
+    fetchApplicants(selectedJobId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, selectedJobId]);
+
+  const updateApplicationStatus = async (
+    applicationId: string,
+    next: ApplicantStatusUI
+  ) => {
+    // optimistic UI
+    setApplications((prev) =>
+      prev.map((r) =>
+        r.applicationId === applicationId ? { ...r, status: next } : r
+      )
+    );
+
+    try {
+      await api.patch(`/applications/${applicationId}/status`, {
+        status: apiStatusFromUi(next),
+      });
+    } catch (e) {
+      console.log("UPDATE STATUS ERROR:", e);
+      // revert by refetch
+      if (selectedJobId) fetchApplicants(selectedJobId);
+    }
+  };
+
+  /* ─────────────────────────── KPI from loaded apps ─────────────────────────── */
+
+  const counts = useMemo(() => {
+    const c: Record<ApplicantStatusUI, number> = {
+      Applied: 0,
+      Selected: 0,
+      Rejected: 0,
+      Hired: 0,
+    };
+    applications.forEach((a) => (c[a.status] += 1));
+    return c;
+  }, [applications]);
+
   const kpis = useMemo(() => {
-    const total = applicants.length;
+    const total = applications.length;
     const selectedRate = total ? Math.round((counts.Selected / total) * 100) : 0;
     return [
       { label: "Total Applicants", value: total, icon: Users },
@@ -266,9 +626,24 @@ export default function EmployerDashboard() {
       { label: "Selected", value: counts.Selected, icon: CheckCircle2 },
       { label: "Selection Rate", value: `${selectedRate}%`, icon: Sparkles },
     ] as const;
-  }, [applicants.length, counts]);
+  }, [applications.length, counts]);
 
-  // ✅ Publish job -> Backend
+  const filteredApplicants = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return applications.filter((a) => {
+      const hit =
+        !q ||
+        a.name.toLowerCase().includes(q) ||
+        (a.city || "").toLowerCase().includes(q) ||
+        (a.role || "").toLowerCase().includes(q) ||
+        (a.email || "").toLowerCase().includes(q);
+      const st = statusFilter === "All" || a.status === statusFilter;
+      return hit && st;
+    });
+  }, [applications, query, statusFilter]);
+
+  /* ─────────────────────────── Publish job (same as your code) ─────────────────────────── */
+
   const publishJob = async () => {
     setPostMsg(null);
 
@@ -293,7 +668,6 @@ export default function EmployerDashboard() {
       salary_min,
       salary_max,
 
-      // ✅ extra fields
       job_area: job.job_area || null,
       total_experience: job.total_experience || null,
       monthly_inhand_salary: job.monthly_inhand_salary
@@ -331,7 +705,6 @@ export default function EmployerDashboard() {
       setSkillInput("");
       setTab("overview");
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.log("PUBLISH ERROR:", err);
       const message = err instanceof Error ? err.message : "❌ Failed to publish job";
       setPostMsg(message);
@@ -340,724 +713,797 @@ export default function EmployerDashboard() {
     }
   };
 
+  /* ───────────────────────────────── Render ───────────────────────────────── */
+
   return (
-    <main className="container-x py-10">
-      {/* Sticky Header */}
-      <div className="sticky top-3 z-20">
-        <div className="rounded-3xl border border-white/10 bg-white/8 backdrop-blur shadow-card px-5 py-4 md:px-6 md:py-5">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-sm">
-                <Building2 size={16} />
-                Employer / HR Dashboard
-              </div>
+    <Shell>
+      {/* TOP HEADER */}
+      <TopHeader
+        onPostJob={() => setTab("jobs")}
+        onViewApplicants={() => setTab("applicants")}
+      />
 
-              <h1 className="mt-2 text-2xl md:text-3xl font-extrabold tracking-tight">
-                Manage hiring in one place
-              </h1>
-
-              <p className="text-white/70 mt-1 text-sm md:text-base">
-                Profile → Post Job → View Resumes → Update Status
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-              <button
-                onClick={() => setTab("jobs")}
-                className="h-11 px-5 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition"
-              >
-                Post a Job
-              </button>
-              <button
-                onClick={() => setTab("applicants")}
-                className="h-11 px-5 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
-              >
-                View Applicants
-              </button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(
-              [
-                ["overview", "Overview"],
-                ["company", "Company Profile"],
-                ["jobs", "Post Job"],
-                ["applicants", "Applicants"],
-              ] as const
-            ).map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => setTab(k)}
-                className={
-                  "px-4 py-2 rounded-full text-sm border transition " +
-                  (tab === k
-                    ? "bg-white text-[#061433] border-transparent"
-                    : "bg-white/8 border-white/12 hover:bg-white/10")
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Row */}
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* KPI */}
+      <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-white/70">{k.label}</div>
-              <div className="h-9 w-9 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                <k.icon size={16} />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl font-extrabold">{k.value}</div>
-          </div>
+          <StatCard key={k.label} label={k.label} value={k.value} Icon={k.icon} />
         ))}
       </div>
 
-      {/* CONTENT */}
-      <div className="mt-6 grid gap-6">
-        {/* OVERVIEW */}
-        {tab === "overview" && (
-          <section className="rounded-3xl border border-white/10 bg-white/6 p-6 md:p-7 shadow-card">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="text-xl font-extrabold">Quick Actions</h2>
-                <p className="text-white/70 text-sm mt-1">
-                  Complete your profile, publish a job and start screening applicants.
-                </p>
-              </div>
+      {/* MAIN GRID */}
+      <div className="mt-6 grid lg:grid-cols-[280px_1fr] gap-5">
+        <Sidebar tab={tab} setTab={setTab} />
 
-              <span className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-white/85">
-                <BadgeCheck size={14} /> Verified (UI)
-              </span>
+        <div className="space-y-5">
+          {tab === "overview" && (
+            <OverviewPanel
+              onCompany={() => setTab("company")}
+              onJobs={() => setTab("jobs")}
+              onApplicants={() => setTab("applicants")}
+            />
+          )}
+
+          {tab === "company" && (
+            <CompanyPanel
+              company={company}
+              setCompany={setCompany}
+              onBack={() => setTab("overview")}
+              inputBase={inputBase}
+            />
+          )}
+
+          {tab === "jobs" && (
+            <PostJobPanel
+              job={job}
+              setJob={setJob}
+              inputBase={inputBase}
+              selectBase={selectBase}
+              textareaBase={textareaBase}
+              titleSug={titleSug}
+              locSug={locSug}
+              areaSug={areaSug}
+              skillInput={skillInput}
+              setSkillInput={setSkillInput}
+              addSkill={addSkill}
+              removeSkill={removeSkill}
+              posting={posting}
+              postMsg={postMsg}
+              publishJob={publishJob}
+              clearJob={() => {
+                setJob(makeEmptyJob());
+                setSkillInput("");
+              }}
+            />
+          )}
+
+          {tab === "applicants" && (
+            <ApplicantsPanel
+              jobs={jobs}
+              jobsLoading={jobsLoading}
+              selectedJobId={selectedJobId}
+              setSelectedJobId={setSelectedJobId}
+              appsLoading={appsLoading}
+              appsMsg={appsMsg}
+              applicants={filteredApplicants}
+              totalApplicants={applications.length}
+              query={query}
+              setQuery={setQuery}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              updateStatus={updateApplicationStatus}
+            />
+          )}
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+/* ───────────────────────────────── Subcomponents ───────────────────────────────── */
+
+function TopHeader({
+  onPostJob,
+  onViewApplicants,
+}: {
+  onPostJob: () => void;
+  onViewApplicants: () => void;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/8 backdrop-blur shadow-card p-5 md:p-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-sm">
+            <Building2 size={16} />
+            Employer Dashboard
+          </div>
+          <h1 className="mt-2 text-2xl md:text-3xl font-extrabold tracking-tight">
+            Post jobs, manage applicants, hire faster
+          </h1>
+          <p className="text-white/70 mt-1 text-sm md:text-base">
+            Profile → Job → Applicants → Status
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={onPostJob}
+            className="h-11 px-5 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition"
+          >
+            Post a Job
+          </button>
+          <button
+            onClick={onViewApplicants}
+            className="h-11 px-5 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
+          >
+            View Applicants
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sidebar({
+  tab,
+  setTab,
+}: {
+  tab: Tab;
+  setTab: (t: Tab) => void;
+}) {
+  return (
+    <aside className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4 h-fit lg:sticky lg:top-6">
+      <div className="text-xs font-extrabold tracking-[0.22em] text-white/55 px-2">
+        NAVIGATION
+      </div>
+      <div className="mt-3 space-y-2">
+        <SideItem active={tab === "overview"} label="Overview" onClick={() => setTab("overview")} />
+        <SideItem active={tab === "company"} label="Company Profile" onClick={() => setTab("company")} />
+        <SideItem active={tab === "jobs"} label="Post a Job" onClick={() => setTab("jobs")} />
+        <SideItem active={tab === "applicants"} label="Applicants" onClick={() => setTab("applicants")} />
+      </div>
+
+      <div className="mt-4 rounded-3xl bg-white/6 border border-white/10 p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-extrabold">Profile Status</div>
+          <Chip tone="good">
+            <BadgeCheck size={14} /> Verified (UI)
+          </Chip>
+        </div>
+        <div className="text-xs text-white/65 mt-2">
+          Complete profile + add job details for higher application rate.
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function OverviewPanel({
+  onCompany,
+  onJobs,
+  onApplicants,
+}: {
+  onCompany: () => void;
+  onJobs: () => void;
+  onApplicants: () => void;
+}) {
+  return (
+    <Panel
+      title="Quick Actions"
+      subtitle="Recommended steps to start hiring."
+      right={
+        <Chip tone="neutral">
+          <ShieldCheck size={14} /> Secure
+        </Chip>
+      }
+    >
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
+              <Building2 size={18} />
             </div>
-
-            <div className="mt-5 grid md:grid-cols-3 gap-4">
-              <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                    <Building2 size={18} />
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Company Profile</div>
-                    <div className="text-white/70 text-sm">Build trust for better applicants.</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setTab("company")}
-                  className="mt-4 w-full h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
-                >
-                  Update Profile
-                </button>
-              </div>
-
-              <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                    <Briefcase size={18} />
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Post a Job</div>
-                    <div className="text-white/70 text-sm">Publish in under a minute.</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setTab("jobs")}
-                  className="mt-4 w-full h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition"
-                >
-                  Create Job
-                </button>
-              </div>
-
-              <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                    <Users size={18} />
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Applicants</div>
-                    <div className="text-white/70 text-sm">Review resumes & update status.</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setTab("applicants")}
-                  className="mt-4 w-full h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
-                >
-                  Open Applicants
-                </button>
-              </div>
+            <div>
+              <div className="font-extrabold">Company Profile</div>
+              <div className="text-white/70 text-sm">Build trust for better applicants.</div>
             </div>
-          </section>
-        )}
+          </div>
+          <button
+            onClick={onCompany}
+            className="mt-4 w-full h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
+          >
+            Update Profile
+          </button>
+        </div>
 
-        {/* COMPANY PROFILE */}
-        {tab === "company" && (
-          <section className="rounded-3xl border border-white/10 bg-white/6 p-6 md:p-7 shadow-card">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                  <Building2 size={18} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold">Company Profile</h2>
-                  <p className="text-white/70 text-sm">This appears on job posts to build credibility.</p>
-                </div>
-              </div>
-
-              <span className="hidden sm:inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-white/85">
-                <BadgeCheck size={14} /> Verified (UI)
-              </span>
+        <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
+              <Briefcase size={18} />
             </div>
+            <div>
+              <div className="font-extrabold">Post a Job</div>
+              <div className="text-white/70 text-sm">Publish in under a minute.</div>
+            </div>
+          </div>
+          <button
+            onClick={onJobs}
+            className="mt-4 w-full h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition"
+          >
+            Create Job
+          </button>
+        </div>
 
-            <div className="mt-5 grid gap-3">
+        <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
+              <Users size={18} />
+            </div>
+            <div>
+              <div className="font-extrabold">Applicants</div>
+              <div className="text-white/70 text-sm">Review resumes & update status.</div>
+            </div>
+          </div>
+          <button
+            onClick={onApplicants}
+            className="mt-4 w-full h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
+          >
+            Open Applicants
+          </button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function CompanyPanel({
+  company,
+  setCompany,
+  onBack,
+  inputBase,
+}: {
+  company: { name: string; contact: string; email: string; phone: string };
+  setCompany: (v: any) => void;
+  onBack: () => void;
+  inputBase: string;
+}) {
+  return (
+    <Panel
+      title="Company Profile"
+      subtitle="This appears on job posts to build credibility."
+      right={
+        <Chip tone="good">
+          <BadgeCheck size={14} /> Verified (UI)
+        </Chip>
+      }
+    >
+      <div className="grid gap-3">
+        <input
+          className={inputBase}
+          placeholder="Company Name"
+          value={company.name}
+          onChange={(e) => setCompany({ ...company, name: e.target.value })}
+        />
+        <input
+          className={inputBase}
+          placeholder="HR / Contact Person"
+          value={company.contact}
+          onChange={(e) => setCompany({ ...company, contact: e.target.value })}
+        />
+        <div className="grid sm:grid-cols-2 gap-3">
+          <input
+            className={inputBase}
+            placeholder="Email"
+            value={company.email}
+            onChange={(e) => setCompany({ ...company, email: e.target.value })}
+          />
+          <input
+            className={inputBase}
+            placeholder="Phone"
+            value={company.phone}
+            onChange={(e) => setCompany({ ...company, phone: e.target.value })}
+          />
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <button className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition px-6">
+            Save Profile (UI)
+          </button>
+          <button
+            onClick={onBack}
+            className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold px-6"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function PostJobPanel({
+  job,
+  setJob,
+  inputBase,
+  selectBase,
+  textareaBase,
+  titleSug,
+  locSug,
+  areaSug,
+  skillInput,
+  setSkillInput,
+  addSkill,
+  removeSkill,
+  posting,
+  postMsg,
+  publishJob,
+  clearJob,
+}: {
+  job: any;
+  setJob: (v: any) => void;
+  inputBase: string;
+  selectBase: string;
+  textareaBase: string;
+  titleSug: string[];
+  locSug: string[];
+  areaSug: string[];
+  skillInput: string;
+  setSkillInput: (v: string) => void;
+  addSkill: () => void;
+  removeSkill: (v: string) => void;
+  posting: boolean;
+  postMsg: string | null;
+  publishJob: () => void;
+  clearJob: () => void;
+}) {
+  return (
+    <Panel
+      title="Post a Job"
+      subtitle="Step-wise sections for faster completion."
+      right={
+        <Chip tone="neutral">
+          <ShieldCheck size={14} /> Secure posting
+        </Chip>
+      }
+    >
+      {postMsg ? (
+        <div className="mb-4 rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white/85">
+          {postMsg}
+        </div>
+      ) : null}
+
+      <div className="space-y-4">
+        <Accordion title="1) Basic Details" desc="Job title, type and experience.">
+          <div className="grid gap-4">
+            <div>
+              <label className="text-sm font-semibold text-white/85">Job Title</label>
               <input
-                className={inputBase}
-                placeholder="Company Name"
-                value={company.name}
-                onChange={(e) => setCompany({ ...company, name: e.target.value })}
+                className={inputBase + " mt-2"}
+                placeholder="Customer Care Executive / HR Executive"
+                value={job.title}
+                onChange={(e) => setJob({ ...job, title: e.target.value })}
+                list="jobTitleList"
               />
-              <input
-                className={inputBase}
-                placeholder="HR / Contact Person"
-                value={company.contact}
-                onChange={(e) => setCompany({ ...company, contact: e.target.value })}
-              />
-              <div className="grid sm:grid-cols-2 gap-3">
-                <input
-                  className={inputBase}
-                  placeholder="Email"
-                  value={company.email}
-                  onChange={(e) => setCompany({ ...company, email: e.target.value })}
-                />
-                <input
-                  className={inputBase}
-                  placeholder="Phone"
-                  value={company.phone}
-                  onChange={(e) => setCompany({ ...company, phone: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 mt-2">
-                <button className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition w-full sm:w-auto px-6">
-                  Save Profile (UI)
-                </button>
-                <button
-                  onClick={() => setTab("overview")}
-                  className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold w-full sm:w-auto px-6"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* POST JOB */}
-        {tab === "jobs" && (
-          <section className="rounded-3xl border border-white/10 bg-white/6 p-6 md:p-7 shadow-card">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                  <Briefcase size={18} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold">Post a Job</h2>
-                  <p className="text-white/70 text-sm mt-1">
-                    Create a high-quality job post to attract better candidates.
-                  </p>
-                </div>
-              </div>
-
-              <span className="hidden sm:inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-white/85">
-                <ShieldCheck size={14} /> Secure posting
-              </span>
+              <datalist id="jobTitleList">
+                {titleSug.map((v) => (
+                  <option key={v} value={v} />
+                ))}
+              </datalist>
             </div>
 
-            {postMsg && (
-              <div className="mt-4 rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white/85">
-                {postMsg}
-              </div>
-            )}
-
-            <div className="mt-6 grid gap-4">
-              {/* Job Title (suggestions) */}
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-semibold text-white/85">Job Title</label>
-                <p className="text-xs text-white/60 mt-0.5">
-                  Example: Customer Care Executive, HR Executive, Telecaller
-                </p>
+                <label className="text-sm font-semibold text-white/85">Job Type</label>
+                <select
+                  className={selectBase + " mt-2"}
+                  value={job.type}
+                  onChange={(e) => setJob({ ...job, type: e.target.value })}
+                >
+                  <option value="WFH">Work from Home</option>
+                  <option value="Office">Onsite / Office</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-white/85">Experience</label>
+                <select
+                  className={selectBase + " mt-2"}
+                  value={job.exp}
+                  onChange={(e) => setJob({ ...job, exp: e.target.value })}
+                >
+                  <option value="Fresher">Fresher</option>
+                  <option value="Experienced">Experienced</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </Accordion>
+
+        <Accordion title="2) Salary & Location" desc="Higher clarity → more applications.">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-semibold text-white/85">Salary Range</label>
+              <div className="relative mt-2">
+                <IndianRupee className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
                 <input
-                  className={inputBase + " mt-2"}
-                  placeholder="Enter job title"
-                  value={job.title}
-                  onChange={(e) => setJob({ ...job, title: e.target.value })}
-                  list="jobTitleList"
+                  className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
+                  placeholder="e.g. 18,000 - 25,000"
+                  value={job.salary}
+                  onChange={(e) => setJob({ ...job, salary: e.target.value })}
                 />
-                <datalist id="jobTitleList">
-                  {titleSug.map((v) => (
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-white/85">Location</label>
+              <div className="relative mt-2">
+                <MapPin className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+                <input
+                  className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
+                  placeholder="Noida / Remote"
+                  value={job.location}
+                  onChange={(e) => setJob({ ...job, location: e.target.value })}
+                  list="jobLocationList"
+                />
+                <datalist id="jobLocationList">
+                  {locSug.map((v) => (
                     <option key={v} value={v} />
                   ))}
                 </datalist>
               </div>
+            </div>
+          </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Job Type</label>
-                  <select
-                    className={selectBase + " mt-2"}
-                    value={job.type}
-                    onChange={(e) => setJob({ ...job, type: e.target.value })}
-                  >
-                    <option value="WFH">Work from Home (WFH)</option>
-                    <option value="Office">Office / Onsite</option>
-                  </select>
-                </div>
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="text-sm font-semibold text-white/85">Job Area</label>
+              <input
+                className={inputBase + " mt-2"}
+                placeholder="Sector 62 / Karol Bagh"
+                value={job.job_area}
+                onChange={(e) => setJob({ ...job, job_area: e.target.value })}
+                list="jobAreaList"
+              />
+              <datalist id="jobAreaList">
+                {areaSug.map((v) => (
+                  <option key={v} value={v} />
+                ))}
+              </datalist>
+            </div>
 
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Experience</label>
-                  <select
-                    className={selectBase + " mt-2"}
-                    value={job.exp}
-                    onChange={(e) => setJob({ ...job, exp: e.target.value })}
-                  >
-                    <option value="Fresher">Fresher</option>
-                    <option value="Experienced">Experienced</option>
-                  </select>
-                </div>
+            <div>
+              <label className="text-sm font-semibold text-white/85">
+                Monthly In-hand Salary (₹)
+              </label>
+              <div className="relative mt-2">
+                <IndianRupee className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+                <input
+                  className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
+                  placeholder="e.g. 22000"
+                  value={job.monthly_inhand_salary}
+                  onChange={(e) =>
+                    setJob({
+                      ...job,
+                      monthly_inhand_salary: e.target.value.replace(/[^\d]/g, ""),
+                    })
+                  }
+                />
               </div>
+            </div>
+          </div>
+        </Accordion>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Salary Range</label>
-                  <p className="text-xs text-white/60 mt-0.5">Monthly range (₹)</p>
+        <Accordion title="3) Skills" desc="Add 3–8 skills for better matching.">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              className={inputBase}
+              placeholder="Excel, Tally, Telecalling..."
+              value={skillInput}
+              onChange={(e) => setSkillInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addSkill();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={addSkill}
+              className="h-11 px-4 rounded-2xl bg-white text-[#061433] font-extrabold hover:opacity-95 transition inline-flex items-center justify-center gap-2"
+            >
+              <Plus size={16} /> Add
+            </button>
+          </div>
 
-                  <div className="relative mt-2">
-                    <IndianRupee className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
-                    <input
-                      className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
-                      placeholder="e.g. 18,000 - 25,000"
-                      value={job.salary}
-                      onChange={(e) => setJob({ ...job, salary: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Location</label>
-                  <p className="text-xs text-white/60 mt-0.5">
-                    City or Area (for WFH you can write Remote)
-                  </p>
-
-                  <div className="relative mt-2">
-                    <MapPin className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
-                    <input
-                      className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
-                      placeholder="e.g. Noida / Remote"
-                      value={job.location}
-                      onChange={(e) => setJob({ ...job, location: e.target.value })}
-                      list="jobLocationList"
-                    />
-                    <datalist id="jobLocationList">
-                      {locSug.map((v) => (
-                        <option key={v} value={v} />
-                      ))}
-                    </datalist>
-                  </div>
-                </div>
-              </div>
-
-              {/* ✅ Job Area + monthly inhand + bonus */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Job Area</label>
-                  <p className="text-xs text-white/60 mt-0.5">
-                    Example: Sector 62, Nehru Place, Karol Bagh
-                  </p>
-                  <input
-                    className={inputBase + " mt-2"}
-                    placeholder="Enter job area"
-                    value={job.job_area}
-                    onChange={(e) => setJob({ ...job, job_area: e.target.value })}
-                    list="jobAreaList"
-                  />
-                  <datalist id="jobAreaList">
-                    {areaSug.map((v) => (
-                      <option key={v} value={v} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Monthly In-hand Salary (₹)</label>
-                  <p className="text-xs text-white/60 mt-0.5">Optional</p>
-                  <div className="relative mt-2">
-                    <IndianRupee className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
-                    <input
-                      className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
-                      placeholder="e.g. 22000"
-                      value={job.monthly_inhand_salary}
-                      onChange={(e) =>
-                        setJob({ ...job, monthly_inhand_salary: e.target.value.replace(/[^\d]/g, "") })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Total Experience</label>
-                  <p className="text-xs text-white/60 mt-0.5">Optional</p>
-                  <input
-                    className={inputBase + " mt-2"}
-                    placeholder="e.g. 0-1 years / 2-5 years"
-                    value={job.total_experience}
-                    onChange={(e) => setJob({ ...job, total_experience: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-white/85">Bonus</label>
-                  <p className="text-xs text-white/60 mt-0.5">Optional</p>
-                  <select
-                    className={selectBase + " mt-2"}
-                    value={job.bonus}
-                    onChange={(e) => setJob({ ...job, bonus: e.target.value as "Yes" | "No" })}
-                  >
-                    <option value="No">No</option>
-                    <option value="Yes">Yes</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* ✅ Skills chips (stored as array) */}
-              <div>
-                <label className="text-sm font-semibold text-white/85">Skills</label>
-                <p className="text-xs text-white/60 mt-0.5">Add skills like Excel, Busy, Tally</p>
-
-                <div className="mt-2 flex flex-col sm:flex-row gap-2">
-                  <input
-                    className={inputBase}
-                    placeholder="Type a skill and press Add"
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                  />
+          {job.skills.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {job.skills.map((s: string) => (
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-sm text-white/90"
+                >
+                  {s}
                   <button
                     type="button"
-                    onClick={addSkill}
-                    className="h-11 px-4 rounded-2xl bg-white text-[#061433] font-extrabold hover:opacity-95 transition inline-flex items-center justify-center gap-2"
+                    onClick={() => removeSkill(s)}
+                    className="opacity-80 hover:opacity-100"
                   >
-                    <Plus size={16} />
-                    Add
+                    <X size={14} />
                   </button>
-                </div>
-
-                {job.skills.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {job.skills.map((s) => (
-                      <span
-                        key={s}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-sm text-white/90"
-                      >
-                        {s}
-                        <button type="button" onClick={() => removeSkill(s)} className="opacity-80 hover:opacity-100">
-                          <X size={14} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Job Description */}
-              <div>
-                <label className="text-sm font-semibold text-white/85">Job Description</label>
-                <p className="text-xs text-white/60 mt-0.5">
-                  Add responsibilities, timings, incentives, skills, and interview process.
-                </p>
-                <textarea
-                  className={textareaBase + " mt-2"}
-                  placeholder="Write job details..."
-                  value={job.desc}
-                  onChange={(e) => setJob({ ...job, desc: e.target.value })}
-                />
-                <div className="mt-2 text-xs text-white/60">
-                  Tip: Clear salary + location + shift timing increases applications.
-                </div>
-              </div>
-
-              {/* ✅ More optional fields */}
-              <div className="rounded-3xl bg-white/6 border border-white/10 p-5">
-                <div className="font-extrabold">More Details (Optional)</div>
-                <div className="mt-4 grid sm:grid-cols-2 gap-4">
-                  <input
-                    className={inputBase}
-                    placeholder="Age (e.g. 18-30)"
-                    value={job.age}
-                    onChange={(e) => setJob({ ...job, age: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Preferred Language (e.g. Hindi/English)"
-                    value={job.preferred_language}
-                    onChange={(e) => setJob({ ...job, preferred_language: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Assets (e.g. Bike, Laptop)"
-                    value={job.assets}
-                    onChange={(e) => setJob({ ...job, assets: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Preferred Industry"
-                    value={job.preferred_industry}
-                    onChange={(e) => setJob({ ...job, preferred_industry: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Degree & Specialisation"
-                    value={job.degree_specialisation}
-                    onChange={(e) => setJob({ ...job, degree_specialisation: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Certification"
-                    value={job.certification}
-                    onChange={(e) => setJob({ ...job, certification: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Job Timings"
-                    value={job.job_timings}
-                    onChange={(e) => setJob({ ...job, job_timings: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Interview Details"
-                    value={job.interview_details}
-                    onChange={(e) => setJob({ ...job, interview_details: e.target.value })}
-                  />
-                </div>
-
-                <div className="mt-4 grid sm:grid-cols-2 gap-4">
-                  <input
-                    className={inputBase}
-                    placeholder="Contact Person Profile (e.g. HR)"
-                    value={job.contact_person_profile}
-                    onChange={(e) => setJob({ ...job, contact_person_profile: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Organization Size (e.g. 11-50)"
-                    value={job.org_size}
-                    onChange={(e) => setJob({ ...job, org_size: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="How soon to fill (e.g. Immediately)"
-                    value={job.fill_urgency}
-                    onChange={(e) => setJob({ ...job, fill_urgency: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Hiring Frequency (e.g. Monthly)"
-                    value={job.hiring_frequency}
-                    onChange={(e) => setJob({ ...job, hiring_frequency: e.target.value })}
-                  />
-                </div>
-
-                <div className="mt-4 grid sm:grid-cols-2 gap-4">
-                  <input
-                    className={inputBase}
-                    placeholder="Company Name (auto from profile)"
-                    value={job.company_name}
-                    onChange={(e) => setJob({ ...job, company_name: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Contact Person Name (auto from profile)"
-                    value={job.contact_person_name}
-                    onChange={(e) => setJob({ ...job, contact_person_name: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Contact Phone (auto from profile)"
-                    value={job.contact_phone}
-                    onChange={(e) => setJob({ ...job, contact_phone: e.target.value })}
-                  />
-                  <input
-                    className={inputBase}
-                    placeholder="Contact Email (auto from profile)"
-                    value={job.contact_email}
-                    onChange={(e) => setJob({ ...job, contact_email: e.target.value })}
-                  />
-                </div>
-
-                <textarea
-                  className={textareaBase + " mt-4"}
-                  placeholder="Job Address"
-                  value={job.job_address}
-                  onChange={(e) => setJob({ ...job, job_address: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  onClick={publishJob}
-                  disabled={posting}
-                  className={
-                    "h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition w-full sm:w-auto px-7 " +
-                    (posting ? "opacity-60 cursor-not-allowed" : "")
-                  }
-                >
-                  {posting ? "Publishing..." : "Publish Job"}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setJob(makeEmptyJob());
-                    setSkillInput("");
-                  }}
-                  className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold w-full sm:w-auto px-7"
-                >
-                  Clear
-                </button>
-              </div>
-
-              <div className="rounded-2xl bg-white/6 border border-white/10 p-4 text-sm text-white/75">
-                Your job post will be visible to candidates after submission.
-              </div>
+                </span>
+              ))}
             </div>
-          </section>
-        )}
+          )}
+        </Accordion>
 
-        {/* APPLICANTS */}
-        {tab === "applicants" && (
-          <section className="rounded-3xl border border-white/10 bg-white/6 p-6 md:p-7 shadow-card">
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                  <Users size={18} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold">
-                    Applicants <span className="text-white/70">(Resume + Status)</span>
-                  </h2>
-                  <p className="text-white/70 text-sm mt-1">Search and update applicant status.</p>
-                </div>
+        <Accordion title="4) Job Description" desc="Clear description increases applicants.">
+          <textarea
+            className={textareaBase}
+            placeholder="Responsibilities, timings, incentives, interview process..."
+            value={job.desc}
+            onChange={(e) => setJob({ ...job, desc: e.target.value })}
+          />
+          <div className="mt-2 text-xs text-white/60">
+            Tip: Salary + location + shift timing = higher conversion.
+          </div>
+        </Accordion>
+
+        <Accordion title="5) More Details (Optional)" desc="Can be skipped.">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <input className={inputBase} placeholder="Age (e.g. 18-30)" value={job.age} onChange={(e) => setJob({ ...job, age: e.target.value })} />
+            <input className={inputBase} placeholder="Preferred Language" value={job.preferred_language} onChange={(e) => setJob({ ...job, preferred_language: e.target.value })} />
+            <input className={inputBase} placeholder="Assets (Bike/Laptop)" value={job.assets} onChange={(e) => setJob({ ...job, assets: e.target.value })} />
+            <input className={inputBase} placeholder="Preferred Industry" value={job.preferred_industry} onChange={(e) => setJob({ ...job, preferred_industry: e.target.value })} />
+            <input className={inputBase} placeholder="Degree & Specialisation" value={job.degree_specialisation} onChange={(e) => setJob({ ...job, degree_specialisation: e.target.value })} />
+            <input className={inputBase} placeholder="Certification" value={job.certification} onChange={(e) => setJob({ ...job, certification: e.target.value })} />
+            <input className={inputBase} placeholder="Job Timings" value={job.job_timings} onChange={(e) => setJob({ ...job, job_timings: e.target.value })} />
+            <input className={inputBase} placeholder="Interview Details" value={job.interview_details} onChange={(e) => setJob({ ...job, interview_details: e.target.value })} />
+          </div>
+        </Accordion>
+
+        <div className="rounded-3xl border border-white/10 bg-white/6 p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div className="text-sm text-white/70">
+            Publish when ready. You can edit later (if you add edit flow).
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={publishJob}
+              disabled={posting}
+              className={
+                "h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition px-7 " +
+                (posting ? "opacity-60 cursor-not-allowed" : "")
+              }
+            >
+              {posting ? "Publishing..." : "Publish Job"}
+            </button>
+
+            <button
+              onClick={clearJob}
+              className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold px-7"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function ApplicantsPanel({
+  jobs,
+  jobsLoading,
+  selectedJobId,
+  setSelectedJobId,
+  appsLoading,
+  appsMsg,
+  applicants,
+  totalApplicants,
+  query,
+  setQuery,
+  statusFilter,
+  setStatusFilter,
+  updateStatus,
+}: {
+  jobs: JobItem[];
+  jobsLoading: boolean;
+  selectedJobId: string;
+  setSelectedJobId: (v: string) => void;
+  appsLoading: boolean;
+  appsMsg: string | null;
+  applicants: ApplicantRowUI[];
+  totalApplicants: number;
+  query: string;
+  setQuery: (v: string) => void;
+  statusFilter: "All" | ApplicantStatusUI;
+  setStatusFilter: (v: "All" | ApplicantStatusUI) => void;
+  updateStatus: (applicationId: string, next: ApplicantStatusUI) => void;
+}) {
+  return (
+    <Panel
+      title="Applicants"
+      subtitle="Select a job → view applicants."
+      right={
+        <Chip tone="neutral">
+          <Users size={14} /> {totalApplicants} Total
+        </Chip>
+      }
+    >
+      {/* Job selector */}
+      <div className="grid lg:grid-cols-[1fr_1fr] gap-3">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs font-extrabold tracking-[0.18em] text-white/55">
+            SELECT JOB
+          </div>
+
+          <div className="mt-2">
+            {jobsLoading ? (
+              <div className="text-sm text-white/70">Loading jobs…</div>
+            ) : jobs.length === 0 ? (
+              <div className="text-sm text-white/70">
+                No jobs found. Post a job first.
               </div>
+            ) : (
+              <select
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value)}
+                className="h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
+              >
+                {jobs.map((j) => (
+                  <option key={String(j.id)} value={String(j.id)}>
+                    {(j.title || "Untitled")} • {(j.location || "—")} • {jobSalaryLabel(j)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                <div className="relative flex-1 lg:w-72">
-                  <Search className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search name, city, role..."
-                    className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
-                  />
-                </div>
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs font-extrabold tracking-[0.18em] text-white/55">
+            FILTERS
+          </div>
 
-                <div className="relative sm:w-52">
-                  <Filter className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as "All" | ApplicantStatus)}
-                    className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
-                  >
-                    <option value="All">All Status</option>
-                    <option value="Applied">Applied</option>
-                    <option value="Selected">Selected</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </div>
-              </div>
+          <div className="mt-2 flex flex-col sm:flex-row gap-3">
+            <div className="relative w-full">
+              <Search className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, city, role..."
+                className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
+              />
             </div>
 
-            <div className="mt-5 space-y-3">
-              {filtered.length === 0 && (
-                <div className="rounded-3xl bg-white/6 border border-white/10 p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
-                      <FileText size={18} />
-                    </div>
-                    <div>
-                      <div className="font-extrabold">No applicants found</div>
-                      <div className="text-white/70 text-sm mt-1">
-                        Try removing filters or publish a job to receive applications.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="relative w-full sm:w-[220px]">
+              <Filter className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25"
+              >
+                <option value="All">All Status</option>
+                <option value="Applied">Applied</option>
+                <option value="Selected">Selected</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Hired">Hired</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              {filtered.map((a) => {
+      {appsMsg ? (
+        <div className="mt-4 rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white/85">
+          {appsMsg}
+        </div>
+      ) : null}
+
+      {/* Table */}
+      <div className="mt-4 overflow-auto rounded-3xl border border-white/10">
+        <table className="w-full text-sm">
+          <thead className="bg-white/5 text-white/70">
+            <tr>
+              <th className="p-3 text-left">Candidate</th>
+              <th className="p-3 text-left">City</th>
+              <th className="p-3 text-left">Role</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {appsLoading ? (
+              <tr>
+                <td className="p-4 text-white/70" colSpan={5}>
+                  Loading applicants…
+                </td>
+              </tr>
+            ) : applicants.length === 0 ? (
+              <tr>
+                <td className="p-4 text-white/70" colSpan={5}>
+                  No applicants found for this job.
+                </td>
+              </tr>
+            ) : (
+              applicants.map((a) => {
                 const meta = statusMeta[a.status];
                 const PillIcon = meta.icon;
 
+                const tone =
+                  a.status === "Selected" || a.status === "Hired"
+                    ? "good"
+                    : a.status === "Rejected"
+                    ? "bad"
+                    : "neutral";
+
                 return (
-                  <div
-                    key={a.name}
-                    className={`rounded-3xl border p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 ${meta.row}`}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-                        <div className="font-extrabold">{a.name}</div>
+                  <tr key={a.applicationId} className="border-t border-white/10">
+                    <td className="p-3">
+                      <div className="font-semibold">{a.name}</div>
+                      {a.email ? (
+                        <div className="text-xs text-white/65">{a.email}</div>
+                      ) : null}
+                    </td>
+                    <td className="p-3">{a.city}</td>
+                    <td className="p-3">{a.role}</td>
+                    <td className="p-3">
+                      <Chip tone={tone}>
+                        <PillIcon size={14} /> {a.status}
+                      </Chip>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-2 flex-wrap items-center">
+                        {a.resumeUrl ? (
+                          <a
+                            href={a.resumeUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-4 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition inline-flex items-center gap-2"
+                          >
+                            <Eye size={16} />
+                            View Resume
+                          </a>
+                        ) : (
+                          <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 inline-flex items-center gap-2">
+                            <Eye size={16} />
+                            No Resume
+                          </span>
+                        )}
 
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${meta.pill}`}
+                        <select
+                          value={a.status}
+                          onChange={(e) =>
+                            updateStatus(
+                              a.applicationId,
+                              e.target.value as ApplicantStatusUI
+                            )
+                          }
+                          className="px-4 py-2 rounded-full bg-white border border-white/20 text-sm text-[#061433] outline-none"
                         >
-                          <PillIcon size={14} />
-                          {a.status}
-                        </span>
+                          <option value="Applied">Applied</option>
+                          <option value="Selected">Selected</option>
+                          <option value="Rejected">Rejected</option>
+                          <option value="Hired">Hired</option>
+                        </select>
+
+                        <button
+                          type="button"
+                          className="px-4 py-2 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition inline-flex items-center gap-2"
+                        >
+                          <FileText size={16} />
+                          Notes (UI)
+                        </button>
                       </div>
-
-                      <div className="text-sm text-white/75 mt-1">
-                        {a.city} • {a.role}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <button className="px-4 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition inline-flex items-center gap-2">
-                        <Eye size={16} />
-                        View Resume
-                      </button>
-
-                      <select
-                        value={a.status}
-                        onChange={(e) => updateStatus(a.name, e.target.value as ApplicantStatus)}
-                        className="px-4 py-2 rounded-full bg-white border border-white/20 text-sm text-[#061433] outline-none"
-                      >
-                        <option value="Applied">Applied</option>
-                        <option value="Selected">Selected</option>
-                        <option value="Rejected">Rejected</option>
-                      </select>
-
-                      <button className="px-4 py-2 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition inline-flex items-center gap-2">
-                        <FileText size={16} />
-                        Update (UI)
-                      </button>
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 );
-              })}
-            </div>
-          </section>
-        )}
+              })
+            )}
+          </tbody>
+        </table>
       </div>
-    </main>
+    </Panel>
   );
 }

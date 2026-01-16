@@ -15,7 +15,7 @@ class CandidateProfileController extends Controller
 
         $candidate = Candidate::where('user_id', $user->id)->first();
 
-        // If profile not created yet, return empty defaults
+        // If profile not created yet, return defaults
         if (!$candidate) {
             return response()->json([
                 'phone' => $user->phone ?? '',
@@ -25,13 +25,13 @@ class CandidateProfileController extends Controller
         }
 
         return response()->json([
-            'phone' => $candidate->phone ?? ($user->phone ?? ''),
-            'city' => $candidate->city ?? ($candidate->current_city ?? ''),
-            'resume_path' => $candidate->resume_path ?? null,
+            'phone' => $user->phone ?? '',
+            'city' => $candidate->current_city ?? '',
+            'resume_path' => $candidate->resume_path ?? ($candidate->video_resume_path ?? null),
         ]);
     }
 
-    // POST /api/candidate/profile  (multipart/form-data)
+    // POST /api/candidate/profile (multipart/form-data)
     public function upsert(Request $request)
     {
         $user = $request->user();
@@ -42,30 +42,36 @@ class CandidateProfileController extends Controller
             'resume' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'], // 5MB
         ]);
 
+        // ✅ phone USERS table me save hoga
+        $user->forceFill(['phone' => $data['phone']])->save();
+
+        // ✅ Candidate row ensure (do NOT use phone/city columns, they don't exist)
         $candidate = Candidate::firstOrCreate(
             ['user_id' => $user->id],
             [
-                'phone' => $data['phone'],
-                'city'  => $data['city'],
+                'full_name' => $user->name ?? '',
+                'email' => $user->email ?? '',
+                'current_city' => $data['city'],
             ]
         );
 
+        // ✅ only existing columns
         $update = [
-            'phone' => $data['phone'],
-            'city'  => $data['city'],
+            'current_city' => $data['city'],
         ];
 
-        // If you also have current_city column, keep in sync (safe)
-        if ($candidate->getConnection()
-            ->getSchemaBuilder()
-            ->hasColumn($candidate->getTable(), 'current_city')
-        ) {
-            $update['current_city'] = $data['city'];
-        }
-
+        // ✅ Resume upload (resume_path agar hai to use, warna video_resume_path)
         if ($request->hasFile('resume')) {
             $path = $request->file('resume')->store('resumes', 'public');
-            $update['resume_path'] = $path;
+
+            $table = $candidate->getTable();
+            $schema = $candidate->getConnection()->getSchemaBuilder();
+
+            if ($schema->hasColumn($table, 'resume_path')) {
+                $update['resume_path'] = $path;
+            } elseif ($schema->hasColumn($table, 'video_resume_path')) {
+                $update['video_resume_path'] = $path;
+            }
         }
 
         $candidate->update($update);
@@ -73,9 +79,9 @@ class CandidateProfileController extends Controller
         return response()->json([
             'message' => 'Profile updated',
             'profile' => [
-                'phone' => $candidate->phone,
-                'city' => $candidate->city,
-                'resume_path' => $candidate->resume_path,
+                'phone' => $user->phone ?? '',
+                'city' => $candidate->current_city ?? '',
+                'resume_path' => $candidate->resume_path ?? ($candidate->video_resume_path ?? null),
             ],
         ], 200);
     }

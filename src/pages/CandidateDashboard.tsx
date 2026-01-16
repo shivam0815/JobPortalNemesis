@@ -1,7 +1,21 @@
 // src/pages/candidate/CandidateDashboard.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { UploadCloud, CheckCircle2, Clock, XCircle } from "lucide-react";
+import {
+  UploadCloud,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Briefcase,
+  Sparkles,
+  Search,
+  Filter,
+  MapPin,
+  Phone,
+  FileText,
+  ArrowRight,
+  AlertTriangle,
+} from "lucide-react";
 import { api } from "../lib/api";
 import type { User } from "../lib/authStorage";
 
@@ -18,48 +32,94 @@ type ApplicationItem = {
     location?: string;
   };
 
-  // fallback if backend later returns flat fields
   applied_job_title?: string | null;
 };
 
 type ProfileForm = {
   phone: string;
   city: string;
+  resume_path?: string | null;
 };
 
-const input =
-  "h-11 rounded-2xl bg-white/8 border border-white/12 px-4 text-sm outline-none focus:border-white/25 w-full";
+type UiStatus = "Applied" | "Selected" | "Rejected" | "Hired";
 
-const pill = (status: AppStatus) => {
-  if (status === "applied")
-    return {
-      text: "Applied",
-      cls: "bg-white/10 border-white/12 text-white/90",
-      Icon: Clock,
-    };
-  if (status === "shortlisted")
-    return {
-      text: "Selected",
-      cls: "bg-emerald-500/12 border-emerald-300/20 text-emerald-50",
-      Icon: CheckCircle2,
-    };
-  if (status === "rejected")
-    return {
-      text: "Rejected",
-      cls: "bg-rose-500/12 border-rose-300/20 text-rose-50",
-      Icon: XCircle,
-    };
-  return {
-    text: "Hired",
-    cls: "bg-sky-500/12 border-sky-300/20 text-sky-50",
-    Icon: CheckCircle2,
-  };
+const card = "rounded-3xl border border-white/12 bg-white/6 shadow-card";
+const soft = "rounded-3xl border border-white/10 bg-white/5";
+
+const input =
+  "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
+const fileInput =
+  "mt-3 block w-full text-sm text-white/80 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-[#061433] file:font-semibold hover:file:opacity-95";
+const select =
+  "h-11 w-full rounded-2xl bg-white border border-white/20 pl-11 pr-4 text-sm text-[#061433] outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
+
+const statusLabel = (s: AppStatus): UiStatus => {
+  if (s === "shortlisted") return "Selected";
+  if (s === "rejected") return "Rejected";
+  if (s === "hired") return "Hired";
+  return "Applied";
+};
+
+const statusMeta: Record<
+  UiStatus,
+  { pill: string; row: string; icon: any; dot: string }
+> = {
+  Applied: {
+    pill: "bg-white/10 border-white/15 text-white",
+    row: "bg-white/6 border-white/10",
+    icon: Clock,
+    dot: "bg-white/70",
+  },
+  Selected: {
+    pill: "bg-emerald-500/15 border-emerald-300/25 text-emerald-50",
+    row: "bg-emerald-500/8 border-emerald-300/18",
+    icon: CheckCircle2,
+    dot: "bg-emerald-300",
+  },
+  Hired: {
+    pill: "bg-emerald-500/18 border-emerald-300/28 text-emerald-50",
+    row: "bg-emerald-500/10 border-emerald-300/18",
+    icon: Sparkles,
+    dot: "bg-emerald-300",
+  },
+  Rejected: {
+    pill: "bg-rose-500/12 border-rose-300/20 text-rose-50",
+    row: "bg-rose-500/7 border-rose-300/16",
+    icon: XCircle,
+    dot: "bg-rose-300",
+  },
+};
+
+const Chip = ({
+  tone = "neutral",
+  children,
+}: {
+  tone?: "neutral" | "good" | "warn";
+  children: React.ReactNode;
+}) => {
+  const cls =
+    tone === "good"
+      ? "bg-emerald-500/15 border-emerald-300/25 text-emerald-50"
+      : tone === "warn"
+      ? "bg-amber-500/15 border-amber-300/25 text-amber-50"
+      : "bg-white/10 border-white/15 text-white";
+  return (
+    <span
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-extrabold ${cls}`}
+    >
+      {children}
+    </span>
+  );
 };
 
 export default function CandidateDashboard() {
   const nav = useNavigate();
 
-  const [profile, setProfile] = useState<ProfileForm>({ phone: "", city: "" });
+  const [profile, setProfile] = useState<ProfileForm>({
+    phone: "",
+    city: "",
+    resume_path: null,
+  });
   const [resume, setResume] = useState<File | null>(null);
 
   const [apps, setApps] = useState<ApplicationItem[]>([]);
@@ -67,7 +127,11 @@ export default function CandidateDashboard() {
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgTone, setMsgTone] = useState<"good" | "warn" | "neutral">("neutral");
   const [saving, setSaving] = useState(false);
+
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"All" | UiStatus>("All");
 
   // ✅ role guard + load profile + load applications
   useEffect(() => {
@@ -94,22 +158,24 @@ export default function CandidateDashboard() {
           setProfile({
             phone: p.data?.phone ?? "",
             city: p.data?.city ?? "",
+            resume_path: p.data?.resume_path ?? null,
           });
         } catch {
-          // profile endpoint missing or not implemented -> keep empty
+          // profile endpoint missing -> keep empty
         } finally {
           if (alive) setLoadingProfile(false);
         }
 
-        // applications (must)
+        // applications
         try {
           const res = await api.get("/candidate/applications");
           if (!alive) return;
 
           const data = res.data;
-          const list = Array.isArray(data) ? data : (data?.data ?? []);
+          const list = Array.isArray(data) ? data : data?.data ?? [];
           setApps(Array.isArray(list) ? list : []);
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.log("CANDIDATE APPLICATIONS ERROR:", e);
           if (alive) setApps([]);
         } finally {
@@ -126,6 +192,14 @@ export default function CandidateDashboard() {
     };
   }, [nav]);
 
+  const completion = useMemo(() => {
+    const phoneOk = !!profile.phone.trim();
+    const cityOk = !!profile.city.trim();
+    const resumeOk = !!profile.resume_path || !!resume;
+    const score = Math.round(((phoneOk ? 1 : 0) + (cityOk ? 1 : 0) + (resumeOk ? 1 : 0)) / 3 * 100);
+    return { phoneOk, cityOk, resumeOk, score };
+  }, [profile.phone, profile.city, profile.resume_path, resume]);
+
   const saveProfile = async () => {
     setMsg(null);
     setSaving(true);
@@ -140,11 +214,17 @@ export default function CandidateDashboard() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setMsg("✅ Profile updated");
+      setMsg("Profile updated");
+      setMsgTone("good");
+
+      // best-effort: mark resume present if uploaded
+      if (resume) setProfile((p) => ({ ...p, resume_path: "uploaded" }));
       setResume(null);
-    } catch (e) {
+    } catch (e: any) {
+      // eslint-disable-next-line no-console
       console.log("SAVE PROFILE ERROR:", e);
-      setMsg("❌ Failed to save profile");
+      setMsg(e?.response?.data?.message || "Failed to save profile");
+      setMsgTone("warn");
     } finally {
       setSaving(false);
     }
@@ -152,144 +232,313 @@ export default function CandidateDashboard() {
 
   const rows = useMemo(() => {
     return apps.map((a) => {
-      const title = a.job?.title ?? a.applied_job_title ?? "—";
+      const title = a.job?.title ?? a.applied_job_title ?? "Untitled Job";
       const city = a.job?.location ?? "—";
-      return { ...a, title, city };
+      const ui = statusLabel(a.status);
+      return {
+        key: String(a.id),
+        jobId: a.job?.id ?? null,
+        title,
+        city,
+        status: ui,
+        rawStatus: a.status,
+        createdAt: a.created_at ? new Date(a.created_at) : null,
+      };
     });
   }, [apps]);
 
+  const counts = useMemo(() => {
+    const c: Record<UiStatus, number> = { Applied: 0, Selected: 0, Rejected: 0, Hired: 0 };
+    rows.forEach((r) => (c[r.status] += 1));
+    return c;
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      const hit = !q || r.title.toLowerCase().includes(q) || r.city.toLowerCase().includes(q);
+      const st = statusFilter === "All" || r.status === statusFilter;
+      return hit && st;
+    });
+  }, [rows, query, statusFilter]);
+
   return (
     <main className="container-x py-10">
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* LEFT: PROFILE */}
-        <section className="lg:col-span-1 rounded-3xl border border-white/12 bg-white/5 shadow-card p-6">
-          <h2 className="text-xl font-extrabold">Candidate Profile</h2>
-          <p className="text-white/70 text-sm mt-1">
-            Resume upload + basic details
-          </p>
+      <div className="grid gap-6">
+        {/* HERO */}
+        <section className={card + " p-6 md:p-8"}>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-sm">
+                <Briefcase size={16} />
+                Candidate Dashboard
+              </div>
 
-          {msg && (
-            <div className="mt-4 rounded-2xl bg-white/10 border border-white/12 p-3 text-sm">
-              {msg}
+              <h1 className="mt-3 text-2xl md:text-3xl font-extrabold tracking-tight">
+                Apply, track and get shortlisted faster
+              </h1>
+
+              <p className="text-white/70 mt-1 text-sm md:text-base">
+                WorkIndia-style flow: complete profile → upload resume → apply daily → track status.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Chip tone={completion.score === 100 ? "good" : "warn"}>
+                  {completion.score === 100 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  {completion.score}% complete
+                </Chip>
+                <Chip tone={completion.resumeOk ? "good" : "warn"}>
+                  <UploadCloud size={14} /> Resume: {loadingProfile ? "…" : completion.resumeOk ? "Ready" : "Pending"}
+                </Chip>
+                <Chip tone={completion.phoneOk ? "good" : "warn"}>
+                  <Phone size={14} /> Phone: {loadingProfile ? "…" : completion.phoneOk ? "Added" : "Missing"}
+                </Chip>
+                <Chip tone={completion.cityOk ? "good" : "warn"}>
+                  <MapPin size={14} /> City: {loadingProfile ? "…" : completion.cityOk ? "Added" : "Missing"}
+                </Chip>
+              </div>
             </div>
-          )}
 
-          <div className="mt-4 grid gap-3">
-            <input
-              className={input}
-              placeholder="Mobile Number"
-              value={profile.phone}
-              onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
-              disabled={loadingProfile}
-            />
-            <input
-              className={input}
-              placeholder="City"
-              value={profile.city}
-              onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
-              disabled={loadingProfile}
-            />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                to="/jobs"
+                className="px-5 py-3 rounded-full bg-white text-[#083B7E] font-extrabold hover:opacity-95 transition inline-flex items-center justify-center gap-2"
+              >
+                Browse Jobs <ArrowRight size={18} />
+              </Link>
+              <button
+                onClick={saveProfile}
+                disabled={saving}
+                className="px-5 py-3 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save Profile"}
+              </button>
+            </div>
+          </div>
 
-            <div className="rounded-2xl bg-white/8 border border-white/12 p-4 text-sm text-white/75">
-              <div className="flex items-center gap-2 font-semibold text-white">
-                <UploadCloud size={18} /> Resume Upload
-              </div>
-              <div className="text-xs text-white/70 mt-1">
-                PDF/DOC/DOCX • max 5MB
-              </div>
+          {msg ? (
+            <div className="mt-4 rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white/90">
+              <span className="inline-flex items-center gap-2">
+                {msgTone === "good" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                {msg}
+              </span>
+            </div>
+          ) : null}
+        </section>
 
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => setResume(e.target.files?.[0] ?? null)}
-                className="mt-3 block w-full text-sm text-white/80 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-[#061433] file:font-semibold hover:file:opacity-95"
-              />
-              {resume && (
-                <div className="mt-2 text-xs text-white/70">
-                  Selected: <span className="text-white/90">{resume.name}</span>
+        {/* TOP STATS */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4">
+            <div className="text-xs text-white/70">Applied</div>
+            <div className="mt-1 text-2xl font-extrabold">{loadingApps ? "…" : counts.Applied}</div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4">
+            <div className="text-xs text-white/70">Selected</div>
+            <div className="mt-1 text-2xl font-extrabold">{loadingApps ? "…" : counts.Selected}</div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4">
+            <div className="text-xs text-white/70">Rejected</div>
+            <div className="mt-1 text-2xl font-extrabold">{loadingApps ? "…" : counts.Rejected}</div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/6 shadow-card p-4">
+            <div className="text-xs text-white/70">Hired</div>
+            <div className="mt-1 text-2xl font-extrabold">{loadingApps ? "…" : counts.Hired}</div>
+          </div>
+        </section>
+
+        {/* GRID: PROFILE + APPLICATIONS */}
+        <div className="grid lg:grid-cols-[1fr_2fr] gap-6">
+          {/* LEFT: PROFILE CARD */}
+          <section className={card + " p-6"}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-extrabold">Profile & Resume</div>
+                <div className="text-sm text-white/65 mt-1">
+                  Keep details updated to get calls.
                 </div>
+              </div>
+
+              <Chip tone={completion.score === 100 ? "good" : "warn"}>
+                <FileText size={14} /> {completion.score}%
+              </Chip>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white/85">Mobile Number</div>
+                <input
+                  className={input + " mt-2"}
+                  placeholder="e.g. 9876543210"
+                  value={profile.phone}
+                  onChange={(e) =>
+                    setProfile((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "") }))
+                  }
+                  disabled={loadingProfile}
+                />
+              </div>
+
+              <div>
+                <div className="text-sm font-semibold text-white/85">City</div>
+                <input
+                  className={input + " mt-2"}
+                  placeholder="e.g. Noida"
+                  value={profile.city}
+                  onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
+                  disabled={loadingProfile}
+                />
+              </div>
+
+              <div className={soft + " p-5"}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 font-extrabold">
+                    <UploadCloud size={18} /> Resume
+                  </div>
+                  <Chip tone={completion.resumeOk ? "good" : "warn"}>
+                    {completion.resumeOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                    {completion.resumeOk ? "Ready" : "Pending"}
+                  </Chip>
+                </div>
+
+                <div className="text-xs text-white/70 mt-2">PDF/DOC/DOCX • max 5MB</div>
+
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setResume(e.target.files?.[0] ?? null)}
+                  className={fileInput}
+                />
+
+                {resume ? (
+                  <div className="mt-2 text-xs text-white/70">
+                    Selected: <span className="text-white/90">{resume.name}</span>
+                  </div>
+                ) : null}
+              </div>
+
+              <button
+                onClick={saveProfile}
+                disabled={saving}
+                className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save Profile"}
+              </button>
+
+              <Link
+                to="/jobs"
+                className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold grid place-items-center"
+              >
+                Browse Jobs
+              </Link>
+            </div>
+          </section>
+
+          {/* RIGHT: APPLICATIONS */}
+          <section className={card + " p-6"}>
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+              <div>
+                <div className="text-lg font-extrabold">My Applications</div>
+                <div className="text-sm text-white/65 mt-1">
+                  Status is updated by employer.
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                <div className="relative flex-1 lg:w-80">
+                  <Search className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+                  <input
+                    className={input.replace("px-4", "pl-11 pr-4")}
+                    placeholder="Search job title or city..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="relative sm:w-56">
+                  <Filter className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as "All" | UiStatus)}
+                    className={select}
+                  >
+                    <option value="All">All Status</option>
+                    <option value="Applied">Applied</option>
+                    <option value="Selected">Selected</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Hired">Hired</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {loadingApps ? (
+                <div className="rounded-3xl bg-white/6 border border-white/12 p-4 text-white/75">
+                  Loading applications…
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="rounded-3xl bg-white/6 border border-white/12 p-6 text-white/75">
+                  No applications found.{" "}
+                  <Link className="underline" to="/jobs">
+                    Browse Jobs
+                  </Link>
+                </div>
+              ) : (
+                filtered.map((a) => {
+                  const meta = statusMeta[a.status];
+                  const Icon = meta.icon;
+
+                  return (
+                    <div
+                      key={a.key}
+                      className={`rounded-3xl border p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 ${meta.row}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+                          <div className="font-extrabold truncate max-w-[560px]">
+                            {a.title}
+                          </div>
+
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${meta.pill}`}
+                          >
+                            <Icon size={14} />
+                            {a.status}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-white/75 mt-1">
+                          {a.city}
+                          {a.createdAt ? (
+                            <span className="text-white/60"> • {a.createdAt.toLocaleDateString()}</span>
+                          ) : null}
+                        </div>
+
+                        {a.jobId ? (
+                          <Link
+                            to={`/jobs/${a.jobId}`}
+                            className="text-xs text-white/70 underline mt-1 inline-flex items-center gap-1.5"
+                          >
+                            View job <ArrowRight size={14} />
+                          </Link>
+                        ) : null}
+                      </div>
+
+                      <div className="shrink-0">
+                        <Link
+                          to="/jobs"
+                          className="px-4 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold inline-flex items-center gap-2"
+                        >
+                          Apply More <ArrowRight size={16} />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
-
-            <button
-              onClick={saveProfile}
-              disabled={saving}
-              className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save Profile"}
-            </button>
-
-            <Link
-              to="/jobs"
-              className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold grid place-items-center"
-            >
-              Browse Jobs
-            </Link>
-          </div>
-        </section>
-
-        {/* RIGHT: APPLICATIONS */}
-        <section className="lg:col-span-2 rounded-3xl border border-white/12 bg-white/5 shadow-card p-6">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-extrabold">My Applications</h2>
-              <p className="text-white/70 text-sm mt-1">
-                Status is updated by employer.
-              </p>
-            </div>
-            <div className="text-sm text-white/70">
-              {loadingApps ? "Loading..." : `${rows.length} applications`}
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {loadingApps ? (
-              <div className="rounded-2xl border border-white/12 bg-white/5 p-6 text-white/75">
-                Loading applications…
-              </div>
-            ) : rows.length === 0 ? (
-              <div className="rounded-2xl border border-white/12 bg-white/5 p-6 text-white/75">
-                No applications yet. <Link className="underline" to="/jobs">Browse Jobs</Link>
-              </div>
-            ) : (
-              rows.map((a) => {
-                const meta = pill(a.status);
-                const Icon = meta.Icon;
-
-                return (
-                  <div
-                    key={String(a.id)}
-                    className="rounded-3xl bg-white/5 border border-white/12 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-bold truncate">{a.title}</div>
-                      <div className="text-sm text-white/70">{a.city}</div>
-
-                      {/* optional: open job */}
-                      {a.job?.id && (
-                        <Link
-                          to={`/jobs/${a.job.id}`}
-                          className="text-xs text-white/70 underline mt-1 inline-block"
-                        >
-                          View job
-                        </Link>
-                      )}
-                    </div>
-
-                    <span
-                      className={
-                        "inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm " +
-                        meta.cls
-                      }
-                    >
-                      <Icon size={16} /> {meta.text}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );
