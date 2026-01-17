@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\CandidateApplicationController;
 use App\Http\Controllers\Api\CandidateProfileController;
+use App\Http\Controllers\Api\CompanyFollowController;
+use App\Http\Controllers\Api\Chat\ChatRoomController;
+use App\Http\Controllers\Api\Chat\ChatMessageController;
 
 // ✅ Admin Controllers
 use App\Http\Controllers\Api\Admin\AdminAuthController;
@@ -13,6 +16,10 @@ use App\Http\Controllers\Api\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\Admin\AdminUsersController;
 use App\Http\Controllers\Api\Admin\AdminJobsController;
 use App\Http\Controllers\Api\Admin\AdminApplicationsController;
+use App\Http\Controllers\Api\EmployerProfileController;
+use App\Http\Controllers\Api\HomeController;
+
+use App\Http\Controllers\Api\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,7 +27,8 @@ use App\Http\Controllers\Api\Admin\AdminApplicationsController;
 |--------------------------------------------------------------------------
 */
 Route::get('/ping', fn () => response()->json(['message' => 'API working']));
-
+Route::get('/active-companies', [JobController::class, 'activeCompanies']);
+Route::get('/active-companies', [HomeController::class, 'activeCompanies']);
 Route::post('/auth/google', [AuthController::class, 'google']);
 
 Route::get('/jobs', [JobController::class, 'index']);
@@ -80,15 +88,36 @@ Route::middleware('auth:sanctum')->group(function () {
     // Candidate Profile
     Route::get('/candidate/profile', [CandidateProfileController::class, 'show']);
     Route::post('/candidate/profile', [CandidateProfileController::class, 'upsert']);
+    // Follow company
+Route::post('/company/follow', [CompanyFollowController::class, 'follow']);
+Route::post('/company/unfollow', [CompanyFollowController::class, 'unfollow']);
+Route::get('/company/follows', [CompanyFollowController::class, 'myFollows']);
 
     // Employer
     Route::post('/jobs', [JobController::class, 'store']);
     Route::get('/jobs/{job}/applications', [ApplicationController::class, 'index']);
     Route::patch('/applications/{application}/status', [ApplicationController::class, 'updateStatus']);
+// Employer company profile
+Route::get('/employer/profile', [EmployerProfileController::class, 'show']);
+Route::post('/employer/profile', [EmployerProfileController::class, 'update']);
 
     // Candidate
     Route::post('/jobs/{job}/apply', [ApplicationController::class, 'apply']);
     Route::get('/candidate/applications', [CandidateApplicationController::class, 'index']);
+
+Route::post('/company/follow', [CompanyFollowController::class, 'follow']);
+Route::post('/company/unfollow', [CompanyFollowController::class, 'unfollow']);
+Route::get('/company/follows', [CompanyFollowController::class, 'myFollows']);
+
+Route::get('/notifications', [NotificationController::class, 'index']);
+Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+Route::patch('/notifications/read-all', [NotificationController::class, 'readAll']);
+
+Route::get('/chat/rooms', [ChatRoomController::class, 'index']);
+Route::post('/chat/rooms/{room}/join', [ChatRoomController::class, 'join']);
+Route::get('/chat/rooms/{room}/messages', [ChatMessageController::class, 'index']);
+Route::post('/chat/rooms/{room}/messages', [ChatMessageController::class, 'store']);
+
 
     // Logout (all roles)
     Route::post('/auth/logout', [AuthController::class, 'logout']);

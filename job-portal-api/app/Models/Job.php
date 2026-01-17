@@ -37,6 +37,10 @@ class Job extends Model
         'hiring_frequency',
         'job_address',
         'is_active',
+        'company_name',
+    'company_email',
+    'company_phone',
+    'company_hr_name',
     ];
 
     protected $casts = [

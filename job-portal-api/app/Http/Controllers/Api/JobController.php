@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Job;
 use Illuminate\Http\Request;
 use App\Models\Suggestion;
+use App\Models\CompanyFollow;
+use App\Models\Notification;
 
 class JobController extends Controller
 {
     public function store(Request $request)
 {
     $data = $request->validate([
-        'employer_id' => 'required|exists:users,id',
+
 
         'title'       => 'required|string|max:255',
         'description' => 'required|string',
@@ -59,8 +61,38 @@ class JobController extends Controller
     if (!array_key_exists('bonus', $data) || $data['bonus'] === null) {
         $data['bonus'] = false;
     }
+$user = $request->user();
+
+// ✅ enforce employer identity
+$data['employer_id'] = $user->id;
+
+// ✅ auto-fill company_name from employer profile if missing
+if (!isset($data['company_name']) || trim((string)$data['company_name']) === '') {
+    $data['company_name'] = $user->company_name;
+}
 
     $job = Job::create($data);
+    // ✅ Notify followers if company_name exists
+$company = trim((string) ($job->company_name ?? ''));
+if ($company !== '') {
+    $followers = CompanyFollow::where('company_name', $company)->pluck('user_id');
+
+    foreach ($followers as $uid) {
+        Notification::create([
+            'user_id' => $uid,
+            'title' => 'New job posted',
+            'message' => $company . ' posted a new job: ' . ($job->title ?? 'Job'),
+            'type' => 'job_post',
+            'data' => [
+                'job_id' => $job->id,
+                'company_name' => $company,
+            ],
+            'is_read' => false,
+            'sent_at' => now(),
+        ]);
+    }
+}
+
 // ✅ store global suggestions (shared)
 $this->saveSuggestion('job_title', $data['title'] ?? null, null);
 $this->saveSuggestion('job_location', $data['location'] ?? null, null);
@@ -73,17 +105,89 @@ $this->saveSuggestion('job_area', $data['job_area'] ?? null, null);
 }
 
 
-    public function index()
-    {
-        $jobs = Job::where('is_active', true)->latest()->get();
-        return response()->json($jobs);
-    }
+   public function index(Request $request)
+{
+    $q    = trim((string) $request->query('q', ''));
+    $city = trim((string) $request->query('city', ''));
+    $exp  = trim((string) $request->query('exp', 'All'));
+    $mode = trim((string) $request->query('mode', 'All'));
+
+    $jobs = Job::query()
+        ->where('is_active', true)
+
+        ->when($q !== '', function ($query) use ($q) {
+            $query->where(function ($qq) use ($q) {
+                $qq->where('title', 'like', "%{$q}%")
+                   ->orWhere('company_name', 'like', "%{$q}%")
+                   ->orWhereJsonContains('skills', $q);
+            });
+        })
+
+        ->when($city !== '', fn ($query) =>
+            $query->where('location', 'like', "%{$city}%")
+        )
+
+        ->when($exp !== 'All', function ($query) use ($exp) {
+            if ($exp === 'Fresher') {
+                $query->where(function ($q) {
+                    $q->whereNull('total_experience')
+                      ->orWhere('total_experience', '0')
+                      ->orWhere('total_experience', '0-1');
+                });
+            }
+
+            if ($exp === 'Experienced') {
+                $query->where(function ($q) {
+                    $q->whereNotNull('total_experience')
+                      ->whereNotIn('total_experience', ['0', '0-1']);
+                });
+            }
+        })
+
+        ->when($mode !== 'All', function ($query) use ($mode) {
+            if ($mode === 'WFH') {
+                $query->where(function ($q) {
+                    $q->where('job_type', 'like', '%WFH%')
+                      ->orWhere('job_type', 'like', '%Remote%');
+                });
+            }
+
+            if ($mode === 'Office') {
+                $query->where('job_type', 'like', '%Office%');
+            }
+        })
+
+        ->latest()
+        ->paginate(12);
+
+    return response()->json($jobs);
+}
+
 
     public function show($id)
     {
         $job = Job::where('is_active', true)->findOrFail($id);
         return response()->json($job);
     }
+
+
+
+// GET active hiring companies
+public function activeCompanies()
+{
+    $companies = Job::where('is_active', true)
+        ->whereNotNull('company_name')
+        ->select('company_name')
+        ->selectRaw('COUNT(*) as jobs_count')
+        ->groupBy('company_name')
+        ->orderByDesc('jobs_count')
+        ->limit(10)
+        ->get();
+
+    return response()->json($companies);
+}
+
+
 
 private function saveSuggestion(string $field, ?string $value, ?int $tenantId = null): void
 {

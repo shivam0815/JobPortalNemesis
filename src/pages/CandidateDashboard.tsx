@@ -15,6 +15,9 @@ import {
   FileText,
   ArrowRight,
   AlertTriangle,
+  Bell,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { api } from "../lib/api";
 import type { User } from "../lib/authStorage";
@@ -43,6 +46,19 @@ type ProfileForm = {
 
 type UiStatus = "Applied" | "Selected" | "Rejected" | "Hired";
 
+type NotificationItem = {
+  id: number | string;
+  title: string;
+  message: string;
+  type?: string;
+  is_read?: boolean;
+  created_at?: string;
+  data?: {
+    job_id?: number | string;
+    company_name?: string;
+  } | null;
+};
+
 const card = "rounded-3xl border border-white/12 bg-white/6 shadow-card";
 const soft = "rounded-3xl border border-white/10 bg-white/5";
 
@@ -60,10 +76,7 @@ const statusLabel = (s: AppStatus): UiStatus => {
   return "Applied";
 };
 
-const statusMeta: Record<
-  UiStatus,
-  { pill: string; row: string; icon: any; dot: string }
-> = {
+const statusMeta: Record<UiStatus, { pill: string; row: string; icon: any; dot: string }> = {
   Applied: {
     pill: "bg-white/10 border-white/15 text-white",
     row: "bg-white/6 border-white/10",
@@ -104,9 +117,7 @@ const Chip = ({
       ? "bg-amber-500/15 border-amber-300/25 text-amber-50"
       : "bg-white/10 border-white/15 text-white";
   return (
-    <span
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-extrabold ${cls}`}
-    >
+    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-extrabold ${cls}`}>
       {children}
     </span>
   );
@@ -133,7 +144,12 @@ export default function CandidateDashboard() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | UiStatus>("All");
 
-  // ✅ role guard + load profile + load applications
+  // ✅ Notifications
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [notifsBusy, setNotifsBusy] = useState(false);
+
+  // ✅ role guard + load profile + load applications + notifications
   useEffect(() => {
     let alive = true;
 
@@ -161,7 +177,7 @@ export default function CandidateDashboard() {
             resume_path: p.data?.resume_path ?? null,
           });
         } catch {
-          // profile endpoint missing -> keep empty
+          // ignore
         } finally {
           if (alive) setLoadingProfile(false);
         }
@@ -170,7 +186,6 @@ export default function CandidateDashboard() {
         try {
           const res = await api.get("/candidate/applications");
           if (!alive) return;
-
           const data = res.data;
           const list = Array.isArray(data) ? data : data?.data ?? [];
           setApps(Array.isArray(list) ? list : []);
@@ -180,6 +195,21 @@ export default function CandidateDashboard() {
           if (alive) setApps([]);
         } finally {
           if (alive) setLoadingApps(false);
+        }
+
+        // notifications
+        try {
+          const n = await api.get("/notifications");
+          if (!alive) return;
+          const data = n.data;
+          const list = Array.isArray(data) ? data : data?.data ?? [];
+          setNotifs(Array.isArray(list) ? list : []);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.log("NOTIFICATIONS ERROR:", e);
+          if (alive) setNotifs([]);
+        } finally {
+          if (alive) setLoadingNotifs(false);
         }
       } catch {
         if (alive) nav("/auth", { replace: true });
@@ -196,9 +226,11 @@ export default function CandidateDashboard() {
     const phoneOk = !!profile.phone.trim();
     const cityOk = !!profile.city.trim();
     const resumeOk = !!profile.resume_path || !!resume;
-    const score = Math.round(((phoneOk ? 1 : 0) + (cityOk ? 1 : 0) + (resumeOk ? 1 : 0)) / 3 * 100);
+    const score = Math.round((((phoneOk ? 1 : 0) + (cityOk ? 1 : 0) + (resumeOk ? 1 : 0)) / 3) * 100);
     return { phoneOk, cityOk, resumeOk, score };
   }, [profile.phone, profile.city, profile.resume_path, resume]);
+
+  const unreadCount = useMemo(() => notifs.filter((n) => !n.is_read).length, [notifs]);
 
   const saveProfile = async () => {
     setMsg(null);
@@ -217,7 +249,6 @@ export default function CandidateDashboard() {
       setMsg("Profile updated");
       setMsgTone("good");
 
-      // best-effort: mark resume present if uploaded
       if (resume) setProfile((p) => ({ ...p, resume_path: "uploaded" }));
       setResume(null);
     } catch (e: any) {
@@ -228,6 +259,35 @@ export default function CandidateDashboard() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const markAllRead = async () => {
+    setNotifsBusy(true);
+    try {
+      await api.post("/notifications/mark-all-read");
+      setNotifs((p) => p.map((x) => ({ ...x, is_read: true })));
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log("MARK ALL READ ERROR:", e);
+    } finally {
+      setNotifsBusy(false);
+    }
+  };
+
+  const openNotification = async (n: NotificationItem) => {
+    const id = n.id;
+    const jobId = n.data?.job_id;
+
+    // optimistic mark read
+    setNotifs((p) => p.map((x) => (String(x.id) === String(id) ? { ...x, is_read: true } : x)));
+
+    try {
+      await api.post(`/notifications/${id}/read`);
+    } catch {
+      // ignore
+    }
+
+    if (jobId) nav(`/jobs/${jobId}`);
   };
 
   const rows = useMemo(() => {
@@ -279,7 +339,7 @@ export default function CandidateDashboard() {
               </h1>
 
               <p className="text-white/70 mt-1 text-sm md:text-base">
-                WorkIndia-style flow: complete profile → upload resume → apply daily → track status.
+                Complete profile → upload resume → apply daily → track status.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -295,6 +355,9 @@ export default function CandidateDashboard() {
                 </Chip>
                 <Chip tone={completion.cityOk ? "good" : "warn"}>
                   <MapPin size={14} /> City: {loadingProfile ? "…" : completion.cityOk ? "Added" : "Missing"}
+                </Chip>
+                <Chip tone={unreadCount ? "warn" : "good"}>
+                  <Bell size={14} /> Alerts: {loadingNotifs ? "…" : unreadCount ? `${unreadCount} new` : "None"}
                 </Chip>
               </div>
             </div>
@@ -346,100 +409,168 @@ export default function CandidateDashboard() {
           </div>
         </section>
 
-        {/* GRID: PROFILE + APPLICATIONS */}
+        {/* GRID: LEFT (PROFILE + NOTIFS) + RIGHT (APPLICATIONS) */}
         <div className="grid lg:grid-cols-[1fr_2fr] gap-6">
-          {/* LEFT: PROFILE CARD */}
-          <section className={card + " p-6"}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-lg font-extrabold">Profile & Resume</div>
-                <div className="text-sm text-white/65 mt-1">
-                  Keep details updated to get calls.
-                </div>
-              </div>
-
-              <Chip tone={completion.score === 100 ? "good" : "warn"}>
-                <FileText size={14} /> {completion.score}%
-              </Chip>
-            </div>
-
-            <div className="mt-5 grid gap-3">
-              <div>
-                <div className="text-sm font-semibold text-white/85">Mobile Number</div>
-                <input
-                  className={input + " mt-2"}
-                  placeholder="e.g. 9876543210"
-                  value={profile.phone}
-                  onChange={(e) =>
-                    setProfile((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "") }))
-                  }
-                  disabled={loadingProfile}
-                />
-              </div>
-
-              <div>
-                <div className="text-sm font-semibold text-white/85">City</div>
-                <input
-                  className={input + " mt-2"}
-                  placeholder="e.g. Noida"
-                  value={profile.city}
-                  onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
-                  disabled={loadingProfile}
-                />
-              </div>
-
-              <div className={soft + " p-5"}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 font-extrabold">
-                    <UploadCloud size={18} /> Resume
-                  </div>
-                  <Chip tone={completion.resumeOk ? "good" : "warn"}>
-                    {completion.resumeOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-                    {completion.resumeOk ? "Ready" : "Pending"}
-                  </Chip>
+          {/* LEFT: PROFILE + NOTIFICATIONS */}
+          <div className="grid gap-6">
+            {/* PROFILE CARD */}
+            <section className={card + " p-6"}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-lg font-extrabold">Profile & Resume</div>
+                  <div className="text-sm text-white/65 mt-1">Keep details updated to get calls.</div>
                 </div>
 
-                <div className="text-xs text-white/70 mt-2">PDF/DOC/DOCX • max 5MB</div>
-
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => setResume(e.target.files?.[0] ?? null)}
-                  className={fileInput}
-                />
-
-                {resume ? (
-                  <div className="mt-2 text-xs text-white/70">
-                    Selected: <span className="text-white/90">{resume.name}</span>
-                  </div>
-                ) : null}
+                <Chip tone={completion.score === 100 ? "good" : "warn"}>
+                  <FileText size={14} /> {completion.score}%
+                </Chip>
               </div>
 
-              <button
-                onClick={saveProfile}
-                disabled={saving}
-                className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition disabled:opacity-60"
-              >
-                {saving ? "Saving..." : "Save Profile"}
-              </button>
+              <div className="mt-5 grid gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-white/85">Mobile Number</div>
+                  <input
+                    className={input + " mt-2"}
+                    placeholder="e.g. 9876543210"
+                    value={profile.phone}
+                    onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "") }))}
+                    disabled={loadingProfile}
+                  />
+                </div>
 
-              <Link
-                to="/jobs"
-                className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold grid place-items-center"
-              >
-                Browse Jobs
-              </Link>
-            </div>
-          </section>
+                <div>
+                  <div className="text-sm font-semibold text-white/85">City</div>
+                  <input
+                    className={input + " mt-2"}
+                    placeholder="e.g. Noida"
+                    value={profile.city}
+                    onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
+                    disabled={loadingProfile}
+                  />
+                </div>
+
+                <div className={soft + " p-5"}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 font-extrabold">
+                      <UploadCloud size={18} /> Resume
+                    </div>
+                    <Chip tone={completion.resumeOk ? "good" : "warn"}>
+                      {completion.resumeOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                      {completion.resumeOk ? "Ready" : "Pending"}
+                    </Chip>
+                  </div>
+
+                  <div className="text-xs text-white/70 mt-2">PDF/DOC/DOCX • max 5MB</div>
+
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => setResume(e.target.files?.[0] ?? null)}
+                    className={fileInput}
+                  />
+
+                  {resume ? (
+                    <div className="mt-2 text-xs text-white/70">
+                      Selected: <span className="text-white/90">{resume.name}</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                <button
+                  onClick={saveProfile}
+                  disabled={saving}
+                  className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition disabled:opacity-60"
+                >
+                  {saving ? "Saving..." : "Save Profile"}
+                </button>
+
+                <Link
+                  to="/jobs"
+                  className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold grid place-items-center"
+                >
+                  Browse Jobs
+                </Link>
+              </div>
+            </section>
+
+            {/* NOTIFICATIONS CARD */}
+            <section className={card + " p-6"}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-lg font-extrabold">Job Alerts</div>
+                  <div className="text-sm text-white/65 mt-1">New jobs from companies you follow.</div>
+                </div>
+
+                <button
+                  onClick={markAllRead}
+                  disabled={notifsBusy || loadingNotifs || unreadCount === 0}
+                  className="px-3 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition text-xs font-extrabold disabled:opacity-50 inline-flex items-center gap-2"
+                  title="Mark all as read"
+                >
+                  <Check size={16} />
+                  Mark all
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {loadingNotifs ? (
+                  <div className="rounded-2xl border border-white/12 bg-white/5 p-4 text-white/75">
+                    Loading alerts…
+                  </div>
+                ) : notifs.length === 0 ? (
+                  <div className="rounded-2xl border border-white/12 bg-white/5 p-4 text-white/75">
+                    No alerts yet. Follow companies from a Job Details page.
+                  </div>
+                ) : (
+                  notifs.slice(0, 10).map((n) => {
+                    const unread = !n.is_read;
+                    const jobId = n.data?.job_id;
+                    const when = n.created_at ? new Date(n.created_at).toLocaleString() : "";
+
+                    return (
+                      <button
+                        key={String(n.id)}
+                        onClick={() => openNotification(n)}
+                        className={
+                          "w-full text-left rounded-2xl border p-4 transition " +
+                          (unread ? "bg-white/10 border-white/15 hover:bg-white/12" : "bg-white/5 border-white/10 hover:bg-white/8")
+                        }
+                        title={jobId ? "Open job" : "Mark read"}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={"h-2 w-2 rounded-full " + (unread ? "bg-amber-300" : "bg-white/30")} />
+                              <div className="font-extrabold text-white truncate">{n.title}</div>
+                            </div>
+                            <div className="text-sm text-white/75 mt-1 line-clamp-2">{n.message}</div>
+                            {when ? <div className="text-xs text-white/55 mt-2">{when}</div> : null}
+                          </div>
+
+                          {jobId ? (
+                            <span className="shrink-0 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-white/10 border border-white/12 text-white/80">
+                              <ExternalLink size={14} /> Open
+                            </span>
+                          ) : null}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {notifs.length > 10 ? (
+                <div className="mt-3 text-xs text-white/65">Showing latest 10 alerts.</div>
+              ) : null}
+            </section>
+          </div>
 
           {/* RIGHT: APPLICATIONS */}
           <section className={card + " p-6"}>
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
               <div>
                 <div className="text-lg font-extrabold">My Applications</div>
-                <div className="text-sm text-white/65 mt-1">
-                  Status is updated by employer.
-                </div>
+                <div className="text-sm text-white/65 mt-1">Status is updated by employer.</div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -495,13 +626,9 @@ export default function CandidateDashboard() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-                          <div className="font-extrabold truncate max-w-[560px]">
-                            {a.title}
-                          </div>
+                          <div className="font-extrabold truncate max-w-[560px]">{a.title}</div>
 
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${meta.pill}`}
-                          >
+                          <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${meta.pill}`}>
                             <Icon size={14} />
                             {a.status}
                           </span>
@@ -509,16 +636,11 @@ export default function CandidateDashboard() {
 
                         <div className="text-sm text-white/75 mt-1">
                           {a.city}
-                          {a.createdAt ? (
-                            <span className="text-white/60"> • {a.createdAt.toLocaleDateString()}</span>
-                          ) : null}
+                          {a.createdAt ? <span className="text-white/60"> • {a.createdAt.toLocaleDateString()}</span> : null}
                         </div>
 
                         {a.jobId ? (
-                          <Link
-                            to={`/jobs/${a.jobId}`}
-                            className="text-xs text-white/70 underline mt-1 inline-flex items-center gap-1.5"
-                          >
+                          <Link to={`/jobs/${a.jobId}`} className="text-xs text-white/70 underline mt-1 inline-flex items-center gap-1.5">
                             View job <ArrowRight size={14} />
                           </Link>
                         ) : null}

@@ -360,6 +360,8 @@ export default function EmployerDashboard() {
     }
   }, [nav]);
 
+
+
   const inputBase =
     "h-11 w-full rounded-2xl bg-white border border-white/20 px-4 text-sm text-[#061433] placeholder:text-[#061433]/55 outline-none focus:border-white/60 focus:ring-2 focus:ring-white/25";
   const selectBase =
@@ -478,6 +480,30 @@ export default function EmployerDashboard() {
   const removeSkill = (v: string) => {
     setJob((p) => ({ ...p, skills: p.skills.filter((s) => s !== v) }));
   };
+
+
+
+// 🔹 Load company profile from backend
+useEffect(() => {
+  (async () => {
+    try {
+      const res = await api.get("/employer/profile");
+
+      if (res.data) {
+        setCompany({
+          name: res.data.company_name || "",
+          contact: res.data.company_hr_name || "",
+          email: res.data.company_email || "",
+          phone: res.data.company_phone || "",
+        });
+      }
+    } catch (e) {
+      console.log("No company profile found yet");
+    }
+  })();
+}, []);
+
+
 
   /* ─────────────────────────── Fetch employer jobs ─────────────────────────── */
 
@@ -695,7 +721,7 @@ export default function EmployerDashboard() {
       hiring_frequency: job.hiring_frequency || null,
       job_address: job.job_address || null,
     };
-
+  console.log(payload);
     try {
       setPosting(true);
       await api.post("/jobs", payload);
@@ -705,6 +731,13 @@ export default function EmployerDashboard() {
       setSkillInput("");
       setTab("overview");
     } catch (err) {
+       const e = err as any;
+         console.log("========== JOB PUBLISH ERROR ==========");
+  console.log("STATUS:", e?.response?.status);
+  console.log("DATA:", e?.response?.data);
+  console.log("ERRORS:", e?.response?.data?.errors);
+  console.log("FULL ERROR:", e);
+  console.log("======================================");
       console.log("PUBLISH ERROR:", err);
       const message = err instanceof Error ? err.message : "❌ Failed to publish job";
       setPostMsg(message);
@@ -1005,9 +1038,27 @@ function CompanyPanel({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
-          <button className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition px-6">
-            Save Profile (UI)
-          </button>
+          <button
+  onClick={async () => {
+    try {
+      await api.post("/employer/profile", {
+        company_name: company.name,
+        company_hr_name: company.contact,
+        company_email: company.email,
+        company_phone: company.phone,
+      });
+
+      alert("Company profile saved");
+    } catch (e) {
+      alert("Failed to save company profile");
+      console.log(e);
+    }
+  }}
+  className="h-11 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition px-6"
+>
+  Save Profile
+</button>
+
           <button
             onClick={onBack}
             className="h-11 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold px-6"
@@ -1089,7 +1140,15 @@ function PostJobPanel({
                 ))}
               </datalist>
             </div>
-
+<div className="mt-4">
+  <label className="text-sm font-semibold text-white/85">Company Name</label>
+  <input
+    className={inputBase + " mt-2"}
+    value={job.company_name}
+    placeholder="Company name"
+    onChange={(e) => setJob({ ...job, company_name: e.target.value })}
+  />
+</div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold text-white/85">Job Type</label>

@@ -13,11 +13,14 @@ import {
   AlertTriangle,
   FileText,
   ArrowRight,
+  Building2,
+  Bell,
 } from "lucide-react";
 import { api } from "../lib/api";
 
 type Job = {
   id: number | string;
+  company_name?: string | null;
   title?: string;
   location?: string;
   job_type?: string;
@@ -137,6 +140,10 @@ export default function JobDetails() {
   const [formMsg, setFormMsg] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
 
+  // ✅ follow state
+  const [myFollows, setMyFollows] = useState<string[]>([]);
+  const [followBusy, setFollowBusy] = useState(false);
+
   const [f, setF] = useState<ApplyForm>({
     full_name: "",
     phone: "",
@@ -177,6 +184,58 @@ export default function JobDetails() {
     cover_letter: "",
   });
 
+  const isLoggedIn = () => {
+    try {
+      // adapt if you use different storage
+      return !!localStorage.getItem("jp_token") || !!localStorage.getItem("token") || !!localStorage.getItem("auth_token");
+    } catch {
+      return false;
+    }
+  };
+
+  // ✅ Load my follows once (if auth)
+  useEffect(() => {
+    (async () => {
+      if (!isLoggedIn()) return;
+      try {
+        const res = await api.get("/company/follows");
+        setMyFollows(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        setMyFollows([]);
+      }
+    })();
+  }, []);
+
+  const toggleFollow = async (companyName: string) => {
+    const name = (companyName || "").trim();
+    if (!name) return;
+
+    if (!isLoggedIn()) {
+      nav("/auth");
+      return;
+    }
+
+    const followed = myFollows.includes(name);
+    setFollowBusy(true);
+
+    // optimistic
+    setMyFollows((p) => (followed ? p.filter((x) => x !== name) : [...p, name]));
+
+    try {
+      if (followed) {
+        await api.post("/company/unfollow", { company_name: name });
+      } else {
+        await api.post("/company/follow", { company_name: name });
+      }
+    } catch {
+      // revert
+      setMyFollows((p) => (followed ? [...p, name] : p.filter((x) => x !== name)));
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
+  // ✅ Load job
   useEffect(() => {
     (async () => {
       if (!id) return;
@@ -191,7 +250,6 @@ export default function JobDetails() {
         const loc = res.data?.location ?? "";
         if (loc) setF((p) => ({ ...p, preferred_job_location: loc }));
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.log("JOB DETAILS API ERROR:", e);
         setErrMsg("Job not found / failed to load");
         setJob(null);
@@ -204,8 +262,10 @@ export default function JobDetails() {
   const ui = useMemo(() => {
     const j = job;
     if (!j) return null;
+    const company = (j.company_name || "").trim() || "Confidential Employer";
     return {
       title: j.title ?? "Untitled Job",
+      company,
       type: j.job_type ?? "—",
       exp: j.total_experience ?? "—",
       salary: salaryLabel(j),
@@ -233,11 +293,7 @@ export default function JobDetails() {
     return { score };
   }, [f, resumeFile]);
 
-  const canSubmit =
-    !!id &&
-    !submitting &&
-    !applied &&
-    completion.score === 100;
+  const canSubmit = !!id && !submitting && !applied && completion.score === 100;
 
   const submitApplication = async () => {
     if (!id) return;
@@ -295,14 +351,11 @@ export default function JobDetails() {
 
       fd.append("resume", resumeFile);
 
-      await api.post(`/jobs/${id}/apply`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post(`/jobs/${id}/apply`, fd, { headers: { "Content-Type": "multipart/form-data" } });
 
       setApplied(true);
       setFormMsg("Application submitted successfully");
     } catch (e: any) {
-      // eslint-disable-next-line no-console
       console.log("APPLY ERROR:", e);
       const msg =
         e?.response?.data?.message ||
@@ -340,18 +393,17 @@ export default function JobDetails() {
     );
   }
 
+  const companyIsReal = ui.company !== "Confidential Employer";
+  const isFollowing = companyIsReal && myFollows.includes(ui.company);
+
   return (
     <main className="container-x py-10">
       <div className="grid gap-6">
-        {/* HEADER / HERO (matches other pages) */}
         <section className={card + " p-6 md:p-8"}>
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center justify-between gap-3">
-                <button
-                  onClick={() => nav(-1)}
-                  className="inline-flex items-center gap-2 text-white/80 hover:text-white"
-                >
+                <button onClick={() => nav(-1)} className="inline-flex items-center gap-2 text-white/80 hover:text-white">
                   <ArrowLeft size={18} /> Back
                 </button>
 
@@ -361,15 +413,18 @@ export default function JobDetails() {
                 </div>
               </div>
 
-              <h1 className="mt-4 text-2xl md:text-3xl font-extrabold tracking-tight">
-                {ui.title}
-              </h1>
+              <h1 className="mt-4 text-2xl md:text-3xl font-extrabold tracking-tight">{ui.title}</h1>
+
+              <p className="mt-1 text-white/85 font-semibold">{ui.company}</p>
 
               <p className="text-white/70 mt-1 text-sm md:text-base">
                 Fill details once, apply fast. Track status in Candidate Dashboard.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                <Chip tone="neutral">
+                  <Building2 size={14} /> {ui.company}
+                </Chip>
                 <Chip tone="neutral">
                   <Briefcase size={14} /> {ui.type}
                 </Chip>
@@ -391,6 +446,24 @@ export default function JobDetails() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
+              {companyIsReal ? (
+                <button
+                  onClick={() => toggleFollow(ui.company)}
+                  disabled={followBusy}
+                  className={
+                    "px-5 py-3 rounded-full font-extrabold transition inline-flex items-center justify-center gap-2 " +
+                    (isFollowing
+                      ? "bg-white/10 border border-white/12 text-white hover:bg-white/12"
+                      : "bg-white text-[#061433] hover:opacity-95") +
+                    (followBusy ? " opacity-70 cursor-not-allowed" : "")
+                  }
+                  title={isFollowing ? "You will get alerts when this company posts jobs" : "Follow to get job alerts"}
+                >
+                  <Bell size={18} />
+                  {followBusy ? "..." : isFollowing ? "Following" : "Follow"}
+                </button>
+              ) : null}
+
               <Link
                 to="/candidate"
                 className="px-5 py-3 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold inline-flex items-center justify-center gap-2"
@@ -423,9 +496,7 @@ export default function JobDetails() {
           ) : null}
         </section>
 
-        {/* CONTENT GRID */}
         <div className="grid lg:grid-cols-[1.25fr_1fr] gap-6">
-          {/* LEFT: DETAILS */}
           <section className={card + " p-6"}>
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -439,6 +510,7 @@ export default function JobDetails() {
 
             <div className="mt-5 grid md:grid-cols-2 gap-3">
               {[
+                ["Company", ui.company],
                 ["Job Type", ui.type],
                 ["Experience", ui.exp],
                 ["Salary", ui.salary],
@@ -453,9 +525,7 @@ export default function JobDetails() {
 
             <div className="mt-5 rounded-3xl bg-white/5 border border-white/12 p-5">
               <div className="font-extrabold">Job Description</div>
-              <p className="text-white/75 text-sm mt-2 leading-relaxed">
-                {ui.desc || "—"}
-              </p>
+              <p className="text-white/75 text-sm mt-2 leading-relaxed">{ui.desc || "—"}</p>
             </div>
 
             <div className="mt-5 rounded-3xl bg-white/5 border border-white/12 p-5 text-sm text-white/75">
@@ -463,15 +533,12 @@ export default function JobDetails() {
             </div>
           </section>
 
-          {/* RIGHT: APPLY FORM */}
           <aside className="lg:sticky lg:top-6">
             <section className={card + " p-6"}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-lg font-extrabold">Apply Form</div>
-                  <div className="text-sm text-white/65 mt-1">
-                    Required fields are marked *
-                  </div>
+                  <div className="text-sm text-white/65 mt-1">Required fields are marked *</div>
                 </div>
                 <div className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 grid place-items-center">
                   <UploadCloud size={18} className="text-white/85" />
@@ -479,11 +546,8 @@ export default function JobDetails() {
               </div>
 
               <div className="mt-5 grid gap-4">
-                {/* PERSONAL */}
                 <div className={soft + " p-5"}>
-                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
-                    Personal
-                  </div>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Personal</div>
 
                   <div className="mt-3 grid sm:grid-cols-2 gap-3">
                     <input
@@ -496,9 +560,7 @@ export default function JobDetails() {
                       className={input}
                       placeholder="Mobile Number *"
                       value={f.phone}
-                      onChange={(e) =>
-                        setF((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "") }))
-                      }
+                      onChange={(e) => setF((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "") }))}
                     />
                   </div>
 
@@ -512,17 +574,8 @@ export default function JobDetails() {
                   </div>
 
                   <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                    <input
-                      className={input}
-                      type="date"
-                      value={f.dob}
-                      onChange={(e) => setF((p) => ({ ...p, dob: e.target.value }))}
-                    />
-                    <select
-                      className={input}
-                      value={f.gender}
-                      onChange={(e) => setF((p) => ({ ...p, gender: e.target.value }))}
-                    >
+                    <input className={input} type="date" value={f.dob} onChange={(e) => setF((p) => ({ ...p, dob: e.target.value }))} />
+                    <select className={input} value={f.gender} onChange={(e) => setF((p) => ({ ...p, gender: e.target.value }))}>
                       <option value="">Gender (optional)</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
@@ -532,76 +585,35 @@ export default function JobDetails() {
                   </div>
                 </div>
 
-                {/* ADDRESS */}
                 <div className={soft + " p-5"}>
-                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
-                    Address
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Address</div>
+
+                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                    <input className={input} placeholder="Current City *" value={f.current_city} onChange={(e) => setF((p) => ({ ...p, current_city: e.target.value }))} />
+                    <input className={input} placeholder="State *" value={f.state} onChange={(e) => setF((p) => ({ ...p, state: e.target.value }))} />
                   </div>
 
                   <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                    <input
-                      className={input}
-                      placeholder="Current City *"
-                      value={f.current_city}
-                      onChange={(e) => setF((p) => ({ ...p, current_city: e.target.value }))}
-                    />
-                    <input
-                      className={input}
-                      placeholder="State *"
-                      value={f.state}
-                      onChange={(e) => setF((p) => ({ ...p, state: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                    <input
-                      className={input}
-                      placeholder="Pincode *"
-                      value={f.pincode}
-                      onChange={(e) => setF((p) => ({ ...p, pincode: e.target.value.replace(/[^\d]/g, "") }))}
-                    />
-                    <input
-                      className={input}
-                      placeholder="Preferred Job Location (optional)"
-                      value={f.preferred_job_location}
-                      onChange={(e) => setF((p) => ({ ...p, preferred_job_location: e.target.value }))}
-                    />
+                    <input className={input} placeholder="Pincode *" value={f.pincode} onChange={(e) => setF((p) => ({ ...p, pincode: e.target.value.replace(/[^\d]/g, "") }))} />
+                    <input className={input} placeholder="Preferred Job Location (optional)" value={f.preferred_job_location} onChange={(e) => setF((p) => ({ ...p, preferred_job_location: e.target.value }))} />
                   </div>
 
                   <div className="mt-3">
-                    <input
-                      className={input}
-                      placeholder="Current Address *"
-                      value={f.current_address}
-                      onChange={(e) => setF((p) => ({ ...p, current_address: e.target.value }))}
-                    />
+                    <input className={input} placeholder="Current Address *" value={f.current_address} onChange={(e) => setF((p) => ({ ...p, current_address: e.target.value }))} />
                   </div>
                 </div>
 
-                {/* BASIC PREFS */}
                 <div className={soft + " p-5"}>
-                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
-                    Preferences
-                  </div>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Preferences</div>
 
                   <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                    <input
-                      className={input}
-                      placeholder="Department / Role (optional)"
-                      value={f.department_role}
-                      onChange={(e) => setF((p) => ({ ...p, department_role: e.target.value }))}
-                    />
+                    <input className={input} placeholder="Department / Role (optional)" value={f.department_role} onChange={(e) => setF((p) => ({ ...p, department_role: e.target.value }))} />
 
                     <div className="relative">
                       <select
                         className={select}
                         value={f.employment_type}
-                        onChange={(e) =>
-                          setF((p) => ({
-                            ...p,
-                            employment_type: e.target.value as ApplyForm["employment_type"],
-                          }))
-                        }
+                        onChange={(e) => setF((p) => ({ ...p, employment_type: e.target.value as ApplyForm["employment_type"] }))}
                       >
                         <option value="Full-time">Full-time</option>
                         <option value="Part-time">Part-time</option>
@@ -613,38 +625,22 @@ export default function JobDetails() {
                   </div>
                 </div>
 
-                {/* SKILLS + COVER */}
                 <div className={soft + " p-5"}>
-                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
-                    Skills
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Skills</div>
+
+                  <div className="mt-3">
+                    <input className={input} placeholder="Key Skills (comma separated) (optional)" value={f.key_skills_text} onChange={(e) => setF((p) => ({ ...p, key_skills_text: e.target.value }))} />
                   </div>
 
                   <div className="mt-3">
-                    <input
-                      className={input}
-                      placeholder="Key Skills (comma separated) (optional)"
-                      value={f.key_skills_text}
-                      onChange={(e) => setF((p) => ({ ...p, key_skills_text: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="mt-3">
-                    <textarea
-                      className={textarea}
-                      placeholder="Cover Letter (optional)"
-                      value={f.cover_letter}
-                      onChange={(e) => setF((p) => ({ ...p, cover_letter: e.target.value }))}
-                    />
+                    <textarea className={textarea} placeholder="Cover Letter (optional)" value={f.cover_letter} onChange={(e) => setF((p) => ({ ...p, cover_letter: e.target.value }))} />
                   </div>
                 </div>
 
-                {/* RESUME */}
                 <div className={soft + " p-5"}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
-                        Resume *
-                      </div>
+                      <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Resume *</div>
                       <div className="text-xs text-white/70 mt-1">PDF/DOC/DOCX • max 5MB</div>
                     </div>
                     <Chip tone={resumeFile ? "good" : "warn"}>
@@ -667,52 +663,31 @@ export default function JobDetails() {
                   ) : null}
                 </div>
 
-                {/* CONSENT */}
                 <div className={soft + " p-5 space-y-2 text-sm"}>
-                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
-                    Consent *
-                  </div>
+                  <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Consent *</div>
 
                   <label className="flex items-start gap-2">
-                    <input
-                      className="mt-1"
-                      type="checkbox"
-                      checked={f.declaration_accepted}
-                      onChange={(e) => setF((p) => ({ ...p, declaration_accepted: e.target.checked }))}
-                    />
+                    <input className="mt-1" type="checkbox" checked={f.declaration_accepted} onChange={(e) => setF((p) => ({ ...p, declaration_accepted: e.target.checked }))} />
                     <span className="text-white/90">I confirm the above information is true</span>
                   </label>
 
                   <label className="flex items-start gap-2">
-                    <input
-                      className="mt-1"
-                      type="checkbox"
-                      checked={f.privacy_policy_accepted}
-                      onChange={(e) => setF((p) => ({ ...p, privacy_policy_accepted: e.target.checked }))}
-                    />
+                    <input className="mt-1" type="checkbox" checked={f.privacy_policy_accepted} onChange={(e) => setF((p) => ({ ...p, privacy_policy_accepted: e.target.checked }))} />
                     <span className="text-white/90">I accept Privacy Policy</span>
                   </label>
 
                   <label className="flex items-start gap-2">
-                    <input
-                      className="mt-1"
-                      type="checkbox"
-                      checked={f.consent_contact}
-                      onChange={(e) => setF((p) => ({ ...p, consent_contact: e.target.checked }))}
-                    />
+                    <input className="mt-1" type="checkbox" checked={f.consent_contact} onChange={(e) => setF((p) => ({ ...p, consent_contact: e.target.checked }))} />
                     <span className="text-white/90">Consent to contact (Call/WhatsApp/Email)</span>
                   </label>
                 </div>
 
-                {/* SUBMIT */}
                 <button
                   onClick={submitApplication}
                   disabled={!canSubmit}
                   className={
                     "h-11 rounded-full font-extrabold transition w-full " +
-                    (!canSubmit
-                      ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed"
-                      : "bg-white text-[#061433] hover:opacity-95")
+                    (!canSubmit ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed" : "bg-white text-[#061433] hover:opacity-95")
                   }
                 >
                   {submitting ? "Submitting..." : applied ? "Applied" : "Submit Application"}

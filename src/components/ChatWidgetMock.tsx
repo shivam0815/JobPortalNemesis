@@ -1,22 +1,113 @@
 // src/components/ChatWidgetMock.tsx
 // Product-ready Community card (NO floating movement).
-// Shine + room highlight retained. No backend changes.
+// Shine + room highlight retained.
+// ✅ Backend connected: rooms, join, messages, send.
 
-import { useEffect, useMemo, useState } from "react";
-import { MessageCircle, UserPlus, Sparkles, ArrowRight } from "lucide-react";
-
-const rooms = ["General Jobs", "Interview Tips", "HR Announcements", "Freshers Help"];
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MessageCircle, UserPlus, Sparkles, ArrowRight, Send } from "lucide-react";
+import {
+  listRooms,
+  joinRoom,
+  fetchMessages,
+  sendMessage,
+  type ChatRoom,
+  type ChatMessage,
+} from "../lib/chatApi";
 
 export default function ChatWidgetMock() {
-  const [active, setActive] = useState(0);
+  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [activeIdx, setActiveIdx] = useState(0);
 
-  // auto-shuffle highlight (every 2.5s)
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [text, setText] = useState("");
+
+  const tRef = useRef<number | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const activeRoom = useMemo(() => rooms[activeIdx] || null, [rooms, activeIdx]);
+  const activeRoomName = useMemo(
+    () => activeRoom?.name || (loadingRooms ? "Loading..." : "No rooms"),
+    [activeRoom, loadingRooms]
+  );
+
+  // Load rooms once
   useEffect(() => {
-    const t = setInterval(() => setActive((p) => (p + 1) % rooms.length), 2500);
-    return () => clearInterval(t);
+    (async () => {
+      try {
+        setLoadingRooms(true);
+        const data = await listRooms(); // optionally: listRooms("jobs")
+        setRooms(data);
+        setActiveIdx(0);
+      } finally {
+        setLoadingRooms(false);
+      }
+    })();
   }, []);
 
-  const activeRoom = useMemo(() => rooms[active], [active]);
+  // Auto-shuffle highlight (every 2.5s) ONLY if rooms loaded
+  useEffect(() => {
+    if (!rooms.length) return;
+
+    if (tRef.current) window.clearInterval(tRef.current);
+    tRef.current = window.setInterval(() => {
+      setActiveIdx((p) => (p + 1) % rooms.length);
+    }, 2500);
+
+    return () => {
+      if (tRef.current) window.clearInterval(tRef.current);
+    };
+  }, [rooms.length]);
+
+  // When active room changes: join + fetch messages
+  useEffect(() => {
+    if (!activeRoom) return;
+
+    (async () => {
+      try {
+        setLoadingMsgs(true);
+        await joinRoom(activeRoom.id);
+        const msgs = await fetchMessages(activeRoom.id);
+        setMessages(msgs);
+      } finally {
+        setLoadingMsgs(false);
+      }
+    })();
+  }, [activeRoom?.id]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  async function onSend() {
+    const body = text.trim();
+    if (!activeRoom || !body) return;
+
+    setText("");
+
+    // optimistic temp message
+    const tempId = Date.now();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        room_id: activeRoom.id,
+        body,
+        user: { id: 0, name: "You" },
+      } as ChatMessage,
+    ]);
+
+    try {
+      const saved = await sendMessage(activeRoom.id, body);
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
+    } catch (e) {
+      // rollback if fail
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    }
+  }
 
   return (
     <aside className="relative rounded-3xl border border-white/10 bg-white/6 p-6 shadow-card overflow-hidden">
@@ -40,7 +131,7 @@ export default function ChatWidgetMock() {
         </div>
       </div>
 
-      {/* follow card */}
+      {/* follow card (UI kept) */}
       <div className="relative mt-5 rounded-3xl bg-white/6 border border-white/10 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -60,40 +151,87 @@ export default function ChatWidgetMock() {
         </button>
       </div>
 
-      {/* room shuffle */}
+      {/* room shuffle + messages */}
       <div className="relative mt-4 rounded-3xl bg-white/6 border border-white/10 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-extrabold">Chat Rooms</div>
           <div className="text-xs text-white/70">
-            Active: <span className="text-white font-semibold">{activeRoom}</span>
+            Active: <span className="text-white font-semibold">{activeRoomName}</span>
           </div>
         </div>
 
         <div className="mt-3 space-y-2">
-          {rooms.map((r, idx) => {
-            const isActive = idx === active;
-            return (
-              <button
-                key={r}
-                onMouseEnter={() => setActive(idx)}
-                className={
-                  "w-full text-left px-4 py-3 rounded-2xl border transition flex items-center justify-between " +
-                  (isActive
-                    ? "bg-white text-[#061433] border-transparent room-pop"
-                    : "bg-white/6 hover:bg-white/8 border-white/10")
-                }
-              >
-                <span className={isActive ? "font-extrabold" : "font-semibold"}>{r}</span>
-                <span className={isActive ? "opacity-100" : "opacity-0"} aria-hidden>
-                  <ArrowRight size={16} />
-                </span>
-              </button>
-            );
-          })}
+          {loadingRooms ? (
+            <div className="text-sm text-white/70">Loading rooms...</div>
+          ) : (
+            rooms.map((r, idx) => {
+              const isActive = idx === activeIdx;
+              return (
+                <button
+                  key={r.id}
+                  onMouseEnter={() => setActiveIdx(idx)}
+                  onClick={() => setActiveIdx(idx)}
+                  className={
+                    "w-full text-left px-4 py-3 rounded-2xl border transition flex items-center justify-between " +
+                    (isActive
+                      ? "bg-white text-[#061433] border-transparent room-pop"
+                      : "bg-white/6 hover:bg-white/8 border-white/10")
+                  }
+                >
+                  <span className={isActive ? "font-extrabold" : "font-semibold"}>{r.name}</span>
+                  <span className={isActive ? "opacity-100" : "opacity-0"} aria-hidden>
+                    <ArrowRight size={16} />
+                  </span>
+                </button>
+              );
+            })
+          )}
         </div>
 
         <div className="mt-3 text-xs text-white/65">
           Tip: Join “Interview Tips” for daily short guidance.
+        </div>
+
+        {/* messages panel */}
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 overflow-hidden">
+          <div className="px-3 py-2 text-xs text-white/70 border-b border-white/10">
+            {loadingMsgs ? "Loading messages..." : "Messages (last 50)"}
+          </div>
+
+          <div className="max-h-52 overflow-y-auto px-3 py-2 space-y-2">
+            {!loadingMsgs && messages.length === 0 ? (
+              <div className="text-sm text-white/70">No messages yet. Say hi 👋</div>
+            ) : (
+              messages.map((m) => (
+                <div key={m.id} className="text-sm">
+                  <span className="text-white/85 font-semibold">{m.user?.name || "User"}:</span>{" "}
+                  <span className="text-white/80">{m.body}</span>
+                </div>
+              ))
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* send box */}
+          <div className="p-3 border-t border-white/10 flex items-center gap-2">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSend();
+              }}
+              placeholder="Type a message..."
+              className="flex-1 h-10 rounded-full bg-white/10 border border-white/12 px-4 text-sm text-white outline-none placeholder:text-white/50"
+            />
+            <button
+              onClick={onSend}
+              className="h-10 w-10 rounded-full bg-white text-[#0B2B6B] grid place-items-center hover:opacity-95 transition"
+              aria-label="Send"
+              title="Send"
+            >
+              <Send size={16} />
+            </button>
+          </div>
         </div>
       </div>
 

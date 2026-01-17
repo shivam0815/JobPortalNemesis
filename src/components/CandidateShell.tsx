@@ -31,7 +31,7 @@ export default function CandidateShell() {
           <div className="mt-6 rounded-3xl bg-white/6 border border-white/12 p-4">
             <div className="text-sm font-semibold">Tip</div>
             <div className="text-sm text-white/75 mt-1">
-              Resume upload karke apply fast hota hai. Status yahi dikhega.
+              Upload resume for fastest result
             </div>
           </div>
         </aside>
