@@ -219,10 +219,13 @@ export default function Home() {
             </section>
           </div>
 
-          <div className="lg:col-span-1 space-y-6">
-            <div className="hidden lg:block sticky top-24">
-              <ChatWidgetMock />
-            </div>
+          <div className="lg:col-span-1 space-y-6 min-w-0">
+
+         <div className="block lg:sticky lg:top-24 min-w-0 w-full">
+  <ChatWidgetMock />
+</div>
+
+
 
             {/* ✅ HOME PAGE: Active Hiring Companies */}
             <section className="rounded-3xl border border-[#8FB1DA]/40 bg-[#1F4F8F]/90 shadow-card p-5">

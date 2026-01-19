@@ -38,6 +38,11 @@ import AdminJobs from "./pages/admin/AdminJobs";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
+import HrPage from "./pages/services/HrPage";
+import ChatRoomPage from "./pages/ChatRoomPage";
+
+import AdminContactMessages from "./pages/admin/AdminContactMessages";
+
 
 export default function App() {
   return (
@@ -54,6 +59,8 @@ export default function App() {
             <Route path="/admin/employees" element={<AdminEmployees />} />
             <Route path="/admin/jobs" element={<AdminJobs />} />
             <Route path="/admin/applications" element={<AdminApplications />} />
+                             <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
+
           </Route>
         </Route>
 
@@ -96,9 +103,10 @@ export default function App() {
                 <Route path="/services/training-development" element={<TrainingDevelopment />} />
                 <Route path="/services/hr-consulting" element={<HRConsulting />} />
                 <Route path="/services/:slug" element={<ServiceDetail />} />
-
+<Route path="/services/hr-training" element={<HrPage />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-
+<Route path="/chat" element={<ChatRoomPage />} />
+<Route path="/chat/:roomId" element={<ChatRoomPage />} />
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

@@ -23,6 +23,7 @@ const services = [
   ["Recruitment", "recruitment"],
   ["Training & Development", "training-development"],
   ["HR Consulting", "hr-consulting"],
+  
 ] as const;
 
 type Role = "candidate" | "employer";

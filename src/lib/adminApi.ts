@@ -159,4 +159,52 @@ export const adminApi = {
       { method: "PATCH", json: { status } }
     );
   },
+
+
+  contactMessages(params: { q?: string; status?: ContactStatus; page?: number; limit?: number } = {}) {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set("q", params.q);
+    if (params.status) qs.set("status", params.status);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.limit) qs.set("limit", String(params.limit));
+    return request<ContactListResp>(`/api/admin/contact-messages?${qs.toString()}`);
+  },
+
+  contactMessage(id: number) {
+    return request<{ message: string; data: ContactMessageRow }>(`/api/admin/contact-messages/${id}`);
+  },
+
+  setContactMessageStatus(id: number, status: ContactStatus) {
+    return request<{ message: string; data: ContactMessageRow }>(
+      `/api/admin/contact-messages/${id}/status`,
+      { method: "PATCH", json: { status } }
+    );
+  },
+
+  deleteContactMessage(id: number) {
+    return request<{ message: string }>(`/api/admin/contact-messages/${id}`, { method: "DELETE" });
+  },
+
+
 };
+
+export type ContactStatus = "new" | "read" | "replied" | "closed";
+
+export type ContactMessageRow = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  subject?: string | null;
+  message: string;
+  status: ContactStatus;
+  read_at?: string | null;
+  created_at?: string;
+};
+
+export type ContactListResp = {
+  message: string;
+  data: ContactMessageRow[];
+  meta: { page: number; totalPages: number; total: number; limit: number };
+};
+

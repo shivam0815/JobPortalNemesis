@@ -46,6 +46,7 @@ export default function AdminLayout() {
           <Item to="/admin/employees" label="Employees" />
           <Item to="/admin/jobs" label="Jobs" />
           <Item to="/admin/applications" label="Applications" />
+          <Item to="/admin/contact-messages" label="Contact Messages" /> {/* ✅ add */}
         </div>
 
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">

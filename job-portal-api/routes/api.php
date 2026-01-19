@@ -20,7 +20,8 @@ use App\Http\Controllers\Api\EmployerProfileController;
 use App\Http\Controllers\Api\HomeController;
 
 use App\Http\Controllers\Api\NotificationController;
-
+use App\Http\Controllers\Api\ContactMessageController;
+use App\Http\Controllers\Api\Admin\AdminContactMessageController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -30,6 +31,7 @@ Route::get('/ping', fn () => response()->json(['message' => 'API working']));
 Route::get('/active-companies', [JobController::class, 'activeCompanies']);
 Route::get('/active-companies', [HomeController::class, 'activeCompanies']);
 Route::post('/auth/google', [AuthController::class, 'google']);
+Route::post('/contact', [ContactMessageController::class, 'store']);
 
 Route::get('/jobs', [JobController::class, 'index']);
 Route::get('/jobs/{id}', [JobController::class, 'show']);
@@ -67,6 +69,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/jobs', [AdminJobsController::class, 'index']);
         Route::get('/jobs/{id}', [AdminJobsController::class, 'show']);
         Route::patch('/jobs/{id}/active', [AdminJobsController::class, 'setActive']); // { is_active: true/false }
+// Contact Messages (Admin)
+Route::get('/contact-messages', [AdminContactMessageController::class, 'index']);
+Route::get('/contact-messages/{id}', [AdminContactMessageController::class, 'show']);
+Route::patch('/contact-messages/{id}/status', [AdminContactMessageController::class, 'updateStatus']);
+Route::delete('/contact-messages/{id}', [AdminContactMessageController::class, 'destroy']);
 
         // Applications
         Route::get('/applications', [AdminApplicationsController::class, 'index']);
