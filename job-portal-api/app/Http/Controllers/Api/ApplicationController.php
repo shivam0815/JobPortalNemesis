@@ -203,10 +203,8 @@ public function index(Request $request, Job $job)
 
     $applications = $job->applications()
         ->with([
-            // Application->candidate() should belongTo(User::class, 'candidate_id')
             'candidate:id,name,email,role',
-            // If you have candidateProfile relation on Application model, keep it. Else remove.
-            // 'candidateProfile:user_id,current_city',
+            
             'job:id,title,location,employer_id'
         ])
         ->latest()
