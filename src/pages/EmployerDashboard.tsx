@@ -507,49 +507,37 @@ useEffect(() => {
 
   /* ─────────────────────────── Fetch employer jobs ─────────────────────────── */
 
-  const fetchEmployerJobs = async () => {
-    const user = JSON.parse(localStorage.getItem("jp_user") || "null") as User | null;
-    const employer_id = user?.id;
-    if (!employer_id) return;
+ const fetchEmployerJobs = async () => {
+  setJobsLoading(true);
+  try {
+    const res = await api.get("/employer/jobs"); // ✅ only logged-in employer jobs
 
-    setJobsLoading(true);
-    try {
-      // Try common endpoints (one of these should exist in your backend)
-      // 1) /employer/jobs
-      // 2) /jobs?employer_id=...
-      let res: any = null;
+    const data = res?.data;
+    const list = Array.isArray(data) ? data : (data?.data ?? []);
 
-      try {
-        res = await api.get("/employer/jobs");
-      } catch {
-        res = await api.get("/jobs", { params: { employer_id } });
-      }
+    const normalized: JobItem[] = (Array.isArray(list) ? list : []).map((j: any) => ({
+      id: j.id,
+      title: j.title,
+      location: j.location,
+      job_type: j.job_type,
+      salary_min: j.salary_min ?? null,
+      salary_max: j.salary_max ?? null,
+      total_experience: j.total_experience ?? null,
+    }));
 
-      const data = res?.data;
-      const list = Array.isArray(data) ? data : (data?.data ?? []);
-      const normalized: JobItem[] = (Array.isArray(list) ? list : []).map((j: any) => ({
-        id: j.id,
-        title: j.title,
-        location: j.location,
-        job_type: j.job_type,
-        salary_min: j.salary_min ?? null,
-        salary_max: j.salary_max ?? null,
-        total_experience: j.total_experience ?? null,
-      }));
+    setJobs(normalized);
 
-      setJobs(normalized);
-
-      // auto-select first job if not selected
-      if (!selectedJobId && normalized.length > 0) {
-        setSelectedJobId(String(normalized[0].id));
-      }
-    } catch (e) {
-      console.log("FETCH JOBS ERROR:", e);
-      setJobs([]);
-    } finally {
-      setJobsLoading(false);
+    if (!selectedJobId && normalized.length > 0) {
+      setSelectedJobId(String(normalized[0].id));
     }
-  };
+  } catch (e) {
+    console.log("FETCH MY JOBS ERROR:", e);
+    setJobs([]);
+  } finally {
+    setJobsLoading(false);
+  }
+};
+
 
   // fetch jobs when opening applicants tab
   useEffect(() => {

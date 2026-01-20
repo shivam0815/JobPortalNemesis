@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, User2, ClipboardList } from "lucide-react";
 
 const itemClass = ({ isActive }: any) =>
@@ -8,13 +9,38 @@ const itemClass = ({ isActive }: any) =>
     : "bg-white/8 border-white/12 text-white/85 hover:bg-white/10 hover:text-white");
 
 export default function CandidateShell() {
+  const nav = useNavigate();
+  const loc = useLocation();
+
+  // ✅ QUICK GUARD (blocks /candidate* if not logged-in candidate)
+  useEffect(() => {
+    const token = localStorage.getItem("jp_token");
+    const userRaw = localStorage.getItem("jp_user");
+
+    if (!token || !userRaw) {
+      nav("/auth", { replace: true, state: { from: loc.pathname } });
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userRaw);
+      if (user?.role !== "candidate") {
+        nav("/", { replace: true });
+      }
+    } catch {
+      nav("/auth", { replace: true });
+    }
+  }, [nav, loc.pathname]);
+
   return (
     <main className="container-x py-10">
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Sidebar */}
         <aside className="lg:col-span-1 rounded-3xl border border-white/12 bg-white/5 shadow-card p-5">
           <div className="font-extrabold text-lg">Candidate Panel</div>
-          <div className="text-sm text-white/70 mt-1">Profile • Resume • Applications</div>
+          <div className="text-sm text-white/70 mt-1">
+            Profile • Resume • Applications
+          </div>
 
           <nav className="mt-5 grid gap-2">
             <NavLink to="/candidate" end className={itemClass}>

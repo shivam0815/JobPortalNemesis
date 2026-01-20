@@ -252,6 +252,31 @@ public function suggestions(Request $request)
 }
 
 
+public function myJobs(Request $request)
+{
+    $user = $request->user();
+
+    if (!$user || $user->role !== 'employer') {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
+    $jobs = Job::query()
+        ->where('employer_id', $user->id)
+        ->latest()
+        ->get([
+            'id',
+            'title',
+            'location',
+            'job_type',
+            'salary_min',
+            'salary_max',
+            'total_experience',
+        ]);
+
+    return response()->json($jobs);
+}
+
+
 
 
 

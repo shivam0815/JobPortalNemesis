@@ -25,6 +25,17 @@ class ApplicationController extends Controller
 {
     $user = $request->user();
 
+    // ✅ only candidate can apply
+if (($user->role ?? null) !== 'candidate') {
+    return response()->json(['message' => 'Only candidates can apply'], 403);
+}
+
+// ✅ job must be active (optional but recommended)
+if (property_exists($job, 'is_active') && !$job->is_active) {
+    return response()->json(['message' => 'Job is not active'], 404);
+}
+
+
     $data = $request->validate([
         'full_name' => ['required', 'string', 'max:255'],
         'phone'     => ['required', 'string', 'max:30'],
@@ -176,13 +187,27 @@ class ApplicationController extends Controller
      * Employer views applications for a specific job
      * Route: GET /api/jobs/{job}/applications
      */
-  public function index(Job $job)
+public function index(Request $request, Job $job)
 {
+    $user = $request->user();
+
+    // ✅ only employer/admin can view applications
+    if (!in_array($user->role ?? null, ['employer', 'admin'], true)) {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
+    // ✅ employer can only view his own job's applications
+    if (($user->role ?? null) === 'employer' && (int)$job->employer_id !== (int)$user->id) {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
     $applications = $job->applications()
         ->with([
-            'candidate:id,name,email',
-            'candidateProfile:user_id,current_city',
-            'job:id,title,location'
+            // Application->candidate() should belongTo(User::class, 'candidate_id')
+            'candidate:id,name,email,role',
+            // If you have candidateProfile relation on Application model, keep it. Else remove.
+            // 'candidateProfile:user_id,current_city',
+            'job:id,title,location,employer_id'
         ])
         ->latest()
         ->get();
@@ -191,23 +216,38 @@ class ApplicationController extends Controller
 }
 
 
+
     /**
      * Employer updates application status
      * Route: PATCH /api/applications/{application}/status
      */
     public function updateStatus(Request $request, Application $application)
-    {
-        $data = $request->validate([
-            'status' => ['required', Rule::in(['shortlisted', 'rejected', 'hired'])]
-        ]);
+{
+    $user = $request->user();
 
-        $application->update([
-            'status' => $data['status']
-        ]);
-
-        return response()->json([
-            'message' => 'Application status updated',
-            'application' => $application->fresh()
-        ]);
+    // ✅ only employer/admin can update
+    if (!in_array($user->role ?? null, ['employer', 'admin'], true)) {
+        return response()->json(['message' => 'Forbidden'], 403);
     }
+
+    // ✅ employer can only update applications of his own jobs
+    if (($user->role ?? null) === 'employer') {
+        $job = Job::find($application->job_id);
+        if (!$job || (int)$job->employer_id !== (int)$user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+    }
+
+    $data = $request->validate([
+        'status' => ['required', Rule::in(['shortlisted', 'rejected', 'hired'])]
+    ]);
+
+    $application->update(['status' => $data['status']]);
+
+    return response()->json([
+        'message' => 'Application status updated',
+        'application' => $application->fresh()
+    ]);
+}
+
 }

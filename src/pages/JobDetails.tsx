@@ -17,6 +17,7 @@ import {
   Bell,
 } from "lucide-react";
 import { api } from "../lib/api";
+import { getToken } from "../lib/authStorage";
 
 type Job = {
   id: number | string;
@@ -196,7 +197,7 @@ export default function JobDetails() {
   // ✅ Load my follows once (if auth)
   useEffect(() => {
     (async () => {
-      if (!isLoggedIn()) return;
+if (!getToken()) return;
       try {
         const res = await api.get("/company/follows");
         setMyFollows(Array.isArray(res.data) ? res.data : []);
@@ -210,10 +211,12 @@ export default function JobDetails() {
     const name = (companyName || "").trim();
     if (!name) return;
 
-    if (!isLoggedIn()) {
-      nav("/auth");
-      return;
-    }
+   if (!getToken()) {
+  localStorage.setItem("jp_return_to", `/jobs/${id}`);
+  nav("/auth", { replace: false });
+  return;
+}
+
 
     const followed = myFollows.includes(name);
     setFollowBusy(true);
@@ -296,7 +299,15 @@ export default function JobDetails() {
   const canSubmit = !!id && !submitting && !applied && completion.score === 100;
 
   const submitApplication = async () => {
+    // ✅ require login before apply
+
+
     if (!id) return;
+    if (!getToken()) {
+  localStorage.setItem("jp_return_to", `/jobs/${id}`);
+  nav("/auth", { replace: false }); // or "/auth/login"
+  return;
+}
     setFormMsg(null);
 
     if (!resumeFile) return setFormMsg("Resume required (PDF/DOC/DOCX).");
@@ -356,7 +367,16 @@ export default function JobDetails() {
       setApplied(true);
       setFormMsg("Application submitted successfully");
     } catch (e: any) {
+
+
       console.log("APPLY ERROR:", e);
+if (e?.response?.status === 401) {
+  localStorage.setItem("jp_return_to", `/jobs/${id}`);
+  nav("/auth", { replace: false });
+  return;
+}
+
+
       const msg =
         e?.response?.data?.message ||
         (typeof e?.response?.data === "string" ? e.response.data : null) ||

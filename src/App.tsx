@@ -40,8 +40,13 @@ import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 import HrPage from "./pages/services/HrPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
-
+import ProtectedRoute from "./lib/ProtectedRoute";
+import CandidateDashboard from "./pages/CandidateDashboard";
 import AdminContactMessages from "./pages/admin/AdminContactMessages";
+import EmailLogin from "./pages/auth/EmailLogin";
+import EmailRegister from "./pages/auth/EmailRegister";
+import EmailVerifyOtp from "./pages/auth/EmailVerifyOtp";
+import EmailSetPassword from "./pages/auth/EmailSetPassword";
 
 
 export default function App() {
@@ -82,13 +87,25 @@ export default function App() {
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/services" element={<Services />} />
+<Route path="/auth/login" element={<EmailLogin />} />
+<Route path="/auth/register" element={<EmailRegister />} />
+<Route path="/auth/verify-otp" element={<EmailVerifyOtp />} />
+<Route path="/auth/set-password" element={<EmailSetPassword />} />
 
                 {/* Candidate (Nested) ✅ */}
-                <Route path="/candidate" element={<CandidateShell />}>
-                  <Route index element={<CandidateHome />} />
-                  <Route path="profile" element={<CandidateProfile />} />
-                  <Route path="applications" element={<CandidateApplications />} />
-                </Route>
+               <Route path="/candidate" element={<CandidateShell />}>
+  {/* ✅ PUBLIC */}
+  <Route index element={<CandidateHome />} />
+
+  {/* ✅ PROTECTED (candidate only) */}
+  <Route element={<ProtectedRoute allow="candidate" />}>
+    <Route path="profile" element={<CandidateProfile />} />
+    <Route path="applications" element={<CandidateApplications />} />
+    {/* ✅ If dashboard is a route, protect it too */}
+    <Route path="dashboard" element={<CandidateDashboard />} />
+  </Route>
+</Route>
+
 
                 {/* Employer */}
                 <Route path="/employer" element={<EmployerDashboard />} />

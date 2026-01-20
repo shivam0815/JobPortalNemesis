@@ -75,6 +75,14 @@ export default function Auth() {
         // Replace temp auth with final auth
         setAuth(finalToken, finalUser);
         goByRole(finalRole || finalUser?.role);
+        const ret = localStorage.getItem("jp_return_to");
+if (ret) {
+  localStorage.removeItem("jp_return_to");
+  nav(ret, { replace: true });
+  return;
+}
+
+goByRole(finalRole || finalUser?.role);
         return;
       }
 
@@ -84,6 +92,13 @@ export default function Auth() {
       }
 
       setAuth(data.token, data.user);
+
+      const ret = localStorage.getItem("jp_return_to");
+if (ret) {
+  localStorage.removeItem("jp_return_to");
+  nav(ret, { replace: true });
+  return;
+}
       goByRole(data.user?.role);
     } catch (e) {
       showError(e, "Google login failed");
@@ -152,9 +167,24 @@ export default function Auth() {
         </div>
 
         {/* NOTE */}
-        <p className="mt-4 text-center text-xs text-white/60">
-          Note: Email/OTP signup is disabled. Google login is active.
-        </p>
+        <div className="mt-6 grid gap-2">
+  <button
+    onClick={() => nav("/auth/login")}
+    disabled={loading}
+    className="h-11 w-full rounded-2xl bg-white/8 border border-white/12 hover:bg-white/10 text-sm font-semibold"
+  >
+    Login with Email
+  </button>
+
+  <button
+    onClick={() => nav("/auth/register")}
+    disabled={loading}
+    className="h-11 w-full rounded-2xl bg-white/8 border border-white/12 hover:bg-white/10 text-sm font-semibold"
+  >
+    Register with Email (OTP)
+  </button>
+</div>
+
       </div>
     </main>
   );

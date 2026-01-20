@@ -36,6 +36,11 @@ Route::post('/contact', [ContactMessageController::class, 'store']);
 Route::get('/jobs', [JobController::class, 'index']);
 Route::get('/jobs/{id}', [JobController::class, 'show']);
 Route::get('/suggestions', [JobController::class, 'suggestions']);
+// Email OTP Auth (public)
+Route::post('/auth/email/request-otp', [AuthController::class, 'requestEmailOtp']);
+Route::post('/auth/email/verify-otp', [AuthController::class, 'verifyEmailOtp']);
+Route::post('/auth/email/set-password', [AuthController::class, 'setPasswordAfterOtp']);
+Route::post('/auth/login', [AuthController::class, 'loginWithPassword']);
 
 /*
 |--------------------------------------------------------------------------
@@ -91,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ✅ frontend expects: POST /api/auth/set-role
     Route::post('/auth/set-role', [AuthController::class, 'selectRole']);
+Route::get('/employer/jobs', [JobController::class, 'myJobs']);
 
     // Candidate Profile
     Route::get('/candidate/profile', [CandidateProfileController::class, 'show']);
