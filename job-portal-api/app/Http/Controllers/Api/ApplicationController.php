@@ -215,10 +215,6 @@ public function index(Request $request, Job $job)
 
 
 
-    /**
-     * Employer updates application status
-     * Route: PATCH /api/applications/{application}/status
-     */
     public function updateStatus(Request $request, Application $application)
 {
     $user = $request->user();
