@@ -8,7 +8,9 @@ import {
   ChevronDown,
   Info,
   LogOut,
+  Bell,
 } from "lucide-react";
+import { api } from "../lib/api";
 
 const navClass = ({ isActive }: any) =>
   "px-3 py-2 rounded-full text-sm transition " +
@@ -23,7 +25,6 @@ const services = [
   ["Recruitment", "recruitment"],
   ["Training & Development", "training-development"],
   ["HR Consulting", "hr-consulting"],
-  
 ] as const;
 
 type Role = "candidate" | "employer";
@@ -33,6 +34,18 @@ type AuthUser = {
   email?: string;
   role?: Role;
   avatar?: string | null;
+};
+
+type Notif = {
+  id: number;
+  user_id?: number;
+  type: string;
+  title: string;
+  body?: string | null;
+  link?: string | null;
+  read_at?: string | null;
+  created_at: string;
+  updated_at?: string;
 };
 
 function readAuth() {
@@ -54,6 +67,9 @@ export default function Navbar() {
   const [{ token, user }, setAuthState] = useState(() => readAuth());
   const isAuthed = Boolean(token && user);
 
+  // ✅ notifications
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+
   // ✅ profile dropdown
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
@@ -64,17 +80,10 @@ export default function Navbar() {
   const svcRef = useRef<HTMLDivElement | null>(null);
   const mobilePanelRef = useRef<HTMLDivElement | null>(null);
 
-  // ✅ keep auth reactive (when setAuth writes localStorage)
+  // ✅ keep auth reactive
   useEffect(() => {
     const refresh = () => setAuthState(readAuth());
-
-    // 1) run once on mount
     refresh();
-
-    // 2) react to navigation (covers many cases)
-    // (localStorage updates won't re-render automatically)
-    // so we refresh on route change too
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // refresh auth on route change
@@ -82,7 +91,7 @@ export default function Navbar() {
     setAuthState(readAuth());
   }, [pathname]);
 
-  // listen to storage changes (works across tabs; sometimes also helps same tab)
+  // listen to storage changes
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "jp_token" || e.key === "jp_user" || e.key === "jp_role") {
@@ -146,29 +155,101 @@ export default function Navbar() {
     else nav("/candidate", { replace: true });
   };
 
+  // 🔁 React to login / logout instantly (custom event if you dispatch it)
+  useEffect(() => {
+    const onAuthChange = () => setAuthState(readAuth());
+    window.addEventListener("auth-changed" as any, onAuthChange);
+    return () => window.removeEventListener("auth-changed" as any, onAuthChange);
+  }, []);
+
+  // ✅ Load notifications
+  const loadNotifs = async () => {
+    if (!isAuthed) {
+      setNotifs([]);
+      return;
+    }
+    try {
+      const res = await api.get("/notifications");
+      setNotifs(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      // ignore
+    }
+  };
+
+  // ✅ Poll notifications when authed
+  useEffect(() => {
+    if (!isAuthed) return;
+
+    loadNotifs(); // first load
+    const t = setInterval(loadNotifs, 25000);
+
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthed, pathname]);
+
+  const topNotif = notifs[0];
+
+  const openNotif = async (n: Notif) => {
+    try {
+      await api.post("/notifications/mark-read", { id: n.id });
+    } catch {}
+
+    // optimistic remove
+    setNotifs((p) => p.filter((x) => x.id !== n.id));
+
+    if (n.link) nav(n.link);
+  };
+
+  const dismissNotif = async (n: Notif) => {
+    try {
+      await api.post("/notifications/mark-read", { id: n.id });
+    } catch {}
+    setNotifs((p) => p.filter((x) => x.id !== n.id));
+  };
+
   const logout = () => {
     localStorage.removeItem("jp_token");
     localStorage.removeItem("jp_user");
     localStorage.removeItem("jp_role");
     setAuthState({ token: null, user: null });
+    setNotifs([]);
     setProfileOpen(false);
     setOpen(false);
     nav("/auth", { replace: true });
   };
-// 🔁 React to login / logout instantly
-useEffect(() => {
-  const onAuthChange = () => {
-    setAuthState(readAuth());
-  };
-
-  window.addEventListener("auth-changed", onAuthChange);
-  return () => {
-    window.removeEventListener("auth-changed", onAuthChange);
-  };
-}, []);
 
   return (
     <header className="sticky top-0 z-50">
+      {/* ✅ Notification bar (top) */}
+      {topNotif ? (
+        <div className="w-full bg-[#071A3A] border-b border-white/10">
+          <div className="mx-auto w-full max-w-7xl px-4 md:px-6 py-2 flex items-center gap-3">
+            <button
+              onClick={() => openNotif(topNotif)}
+              className="flex-1 text-left text-white/90 hover:text-white inline-flex items-center gap-2 min-w-0"
+              title={topNotif.body || topNotif.title}
+            >
+              <Bell size={16} />
+              <span className="font-semibold whitespace-nowrap">
+                {topNotif.title}
+              </span>
+              <span className="text-white/70 text-sm truncate">
+                {topNotif.body || ""}
+              </span>
+            </button>
+
+            <button
+              onClick={() => dismissNotif(topNotif)}
+              className="h-8 w-8 rounded-xl bg-white/10 border border-white/12 grid place-items-center hover:bg-white/12"
+              aria-label="dismiss"
+              title="Dismiss"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="relative">
         <div className="absolute inset-0 bg-[#0B4FA8]/70 backdrop-blur border-b border-white/10" />
         <div className="pointer-events-none absolute inset-x-0 -top-10 h-20 bg-white/10 blur-3xl opacity-30" />

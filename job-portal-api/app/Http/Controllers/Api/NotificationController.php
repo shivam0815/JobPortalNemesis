@@ -11,30 +11,32 @@ class NotificationController extends Controller
     // GET /api/notifications
     public function index(Request $request)
     {
-        $list = Notification::where('user_id', $request->user()->id)
-            ->orderByDesc('id')
+        return Notification::where('user_id', $request->user()->id)
+            ->orderByDesc('created_at')
             ->limit(50)
             ->get();
-
-        return response()->json($list);
     }
 
-    // PATCH /api/notifications/{id}/read
-    public function markRead(Request $request, $id)
+    // POST /api/notifications/mark-read
+    public function markRead(Request $request)
     {
-        $n = Notification::where('user_id', $request->user()->id)->findOrFail($id);
-        $n->is_read = true;
-        $n->save();
+        $request->validate([
+            'id' => 'required|integer',
+        ]);
+
+        Notification::where('id', $request->id)
+            ->where('user_id', $request->user()->id)
+            ->update(['read_at' => now()]);
 
         return response()->json(['message' => 'ok']);
     }
 
-    // PATCH /api/notifications/read-all
-    public function readAll(Request $request)
+    // POST /api/notifications/mark-all-read
+    public function markAllRead(Request $request)
     {
         Notification::where('user_id', $request->user()->id)
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
 
         return response()->json(['message' => 'ok']);
     }

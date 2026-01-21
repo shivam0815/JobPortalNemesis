@@ -15,23 +15,23 @@ class Application extends Model
     protected $fillable = [
         'job_id',
         'candidate_id',
-
-        // ✅ add these (so they don't stay NULL)
         'applied_job_title',
         'department_role',
-
+        'interested_titles', // ✅
         'cover_letter',
         'resume_url',
         'status',
     ];
 
-    // candidate_id = users.id
+    protected $casts = [
+        'interested_titles' => 'array', // ✅
+    ];
+
     public function candidate()
     {
         return $this->belongsTo(User::class, 'candidate_id');
     }
 
-    // candidates.user_id = users.id (candidate profile table)
     public function candidateProfile()
     {
         return $this->hasOne(Candidate::class, 'user_id', 'candidate_id');

@@ -264,7 +264,7 @@ export default function CandidateDashboard() {
   const markAllRead = async () => {
     setNotifsBusy(true);
     try {
-      await api.post("/notifications/mark-all-read");
+await api.patch("/notifications/read-all");
       setNotifs((p) => p.map((x) => ({ ...x, is_read: true })));
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -282,7 +282,7 @@ export default function CandidateDashboard() {
     setNotifs((p) => p.map((x) => (String(x.id) === String(id) ? { ...x, is_read: true } : x)));
 
     try {
-      await api.post(`/notifications/${id}/read`);
+await api.patch(`/notifications/${id}/read`);
     } catch {
       // ignore
     }

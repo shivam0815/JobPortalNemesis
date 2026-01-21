@@ -122,9 +122,9 @@ Route::post('/company/follow', [CompanyFollowController::class, 'follow']);
 Route::post('/company/unfollow', [CompanyFollowController::class, 'unfollow']);
 Route::get('/company/follows', [CompanyFollowController::class, 'myFollows']);
 
-Route::get('/notifications', [NotificationController::class, 'index']);
-Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
-Route::patch('/notifications/read-all', [NotificationController::class, 'readAll']);
+ Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/mark-read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
 
 Route::get('/chat/rooms', [ChatRoomController::class, 'index']);
 Route::post('/chat/rooms/{room}/join', [ChatRoomController::class, 'join']);

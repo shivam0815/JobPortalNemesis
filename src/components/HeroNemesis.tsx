@@ -121,12 +121,7 @@ export default function HeroNemesis() {
               >
                 Browse Jobs <ArrowRight size={18} />
               </a>
-              <a
-                href="/auth"
-                className="px-6 py-3 rounded-full bg-white/12 border border-white/15 hover:bg-white/15 transition font-semibold text-white inline-flex items-center justify-center"
-              >
-                Candidate / Employer Login
-              </a>
+             
             </motion.div>
 
             <motion.div {...fadeUp(0.28)} className="mt-7 grid sm:grid-cols-2 gap-3">

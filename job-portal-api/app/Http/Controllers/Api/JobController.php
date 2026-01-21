@@ -72,26 +72,31 @@ if (!isset($data['company_name']) || trim((string)$data['company_name']) === '')
 }
 
     $job = Job::create($data);
-    // ✅ Notify followers if company_name exists
 $company = trim((string) ($job->company_name ?? ''));
+
 if ($company !== '') {
     $followers = CompanyFollow::where('company_name', $company)->pluck('user_id');
 
-    foreach ($followers as $uid) {
-        Notification::create([
-            'user_id' => $uid,
-            'title' => 'New job posted',
-            'message' => $company . ' posted a new job: ' . ($job->title ?? 'Job'),
-            'type' => 'job_post',
-            'data' => [
-                'job_id' => $job->id,
-                'company_name' => $company,
-            ],
-            'is_read' => false,
-            'sent_at' => now(),
-        ]);
+    if ($followers->count() > 0) {
+        $rows = [];
+
+        foreach ($followers as $uid) {
+            $rows[] = [
+                'user_id' => $uid,
+                'type' => 'job_posted',
+                'title' => 'New Job Posted',
+                'body'  => $company . ' posted: ' . ($job->title ?? 'New opening'),
+                'link'  => '/jobs/' . $job->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // bulk insert (fast)
+        Notification::insert($rows);
     }
 }
+
 
 // ✅ store global suggestions (shared)
 $this->saveSuggestion('job_title', $data['title'] ?? null, null);

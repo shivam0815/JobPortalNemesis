@@ -45,6 +45,7 @@ type ApplyForm = {
   current_address: string;
 
   department_role: string;
+  interested_titles: string[]; // ✅ NEW
   preferred_job_location: string;
   employment_type: "Full-time" | "Part-time" | "Internship" | "Work from Home";
 
@@ -145,6 +146,11 @@ export default function JobDetails() {
   const [myFollows, setMyFollows] = useState<string[]>([]);
   const [followBusy, setFollowBusy] = useState(false);
 
+  // ✅ Interested categories search (from backend suggestions)
+  const [titleQuery, setTitleQuery] = useState("");
+  const [titleOptions, setTitleOptions] = useState<string[]>([]);
+  const [titleLoading, setTitleLoading] = useState(false);
+
   const [f, setF] = useState<ApplyForm>({
     full_name: "",
     phone: "",
@@ -158,6 +164,7 @@ export default function JobDetails() {
     current_address: "",
 
     department_role: "",
+    interested_titles: [], // ✅ NEW
     preferred_job_location: "",
     employment_type: "Full-time",
 
@@ -185,19 +192,10 @@ export default function JobDetails() {
     cover_letter: "",
   });
 
-  const isLoggedIn = () => {
-    try {
-      // adapt if you use different storage
-      return !!localStorage.getItem("jp_token") || !!localStorage.getItem("token") || !!localStorage.getItem("auth_token");
-    } catch {
-      return false;
-    }
-  };
-
   // ✅ Load my follows once (if auth)
   useEffect(() => {
     (async () => {
-if (!getToken()) return;
+      if (!getToken()) return;
       try {
         const res = await api.get("/company/follows");
         setMyFollows(Array.isArray(res.data) ? res.data : []);
@@ -211,12 +209,11 @@ if (!getToken()) return;
     const name = (companyName || "").trim();
     if (!name) return;
 
-   if (!getToken()) {
-  localStorage.setItem("jp_return_to", `/jobs/${id}`);
-  nav("/auth", { replace: false });
-  return;
-}
-
+    if (!getToken()) {
+      localStorage.setItem("jp_return_to", `/jobs/${id}`);
+      nav("/auth", { replace: false });
+      return;
+    }
 
     const followed = myFollows.includes(name);
     setFollowBusy(true);
@@ -253,6 +250,7 @@ if (!getToken()) return;
         const loc = res.data?.location ?? "";
         if (loc) setF((p) => ({ ...p, preferred_job_location: loc }));
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.log("JOB DETAILS API ERROR:", e);
         setErrMsg("Job not found / failed to load");
         setJob(null);
@@ -261,6 +259,33 @@ if (!getToken()) return;
       }
     })();
   }, [id]);
+
+  // ✅ Suggestions for interested titles (job_title)
+  useEffect(() => {
+    let alive = true;
+    const q = titleQuery.trim();
+
+    const run = async () => {
+      setTitleLoading(true);
+      try {
+        const res = await api.get("/suggestions", {
+          params: { field: "job_title", q, limit: 20 },
+        });
+        if (!alive) return;
+        setTitleOptions(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        if (alive) setTitleOptions([]);
+      } finally {
+        if (alive) setTitleLoading(false);
+      }
+    };
+
+    const t = setTimeout(run, 250);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [titleQuery]);
 
   const ui = useMemo(() => {
     const j = job;
@@ -291,6 +316,8 @@ if (!getToken()) return;
       !!f.declaration_accepted,
       !!f.privacy_policy_accepted,
       !!f.consent_contact,
+      // optional requirement:
+      // f.interested_titles.length >= 1,
     ];
     const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
     return { score };
@@ -299,15 +326,14 @@ if (!getToken()) return;
   const canSubmit = !!id && !submitting && !applied && completion.score === 100;
 
   const submitApplication = async () => {
-    // ✅ require login before apply
-
-
     if (!id) return;
+
     if (!getToken()) {
-  localStorage.setItem("jp_return_to", `/jobs/${id}`);
-  nav("/auth", { replace: false }); // or "/auth/login"
-  return;
-}
+      localStorage.setItem("jp_return_to", `/jobs/${id}`);
+      nav("/auth", { replace: false });
+      return;
+    }
+
     setFormMsg(null);
 
     if (!resumeFile) return setFormMsg("Resume required (PDF/DOC/DOCX).");
@@ -332,6 +358,10 @@ if (!getToken()) return;
       fd.append("current_address", f.current_address);
 
       if (f.department_role) fd.append("department_role", f.department_role);
+
+      // ✅ send interested_titles[]
+      f.interested_titles.forEach((t, i) => fd.append(`interested_titles[${i}]`, t));
+
       if (f.preferred_job_location) fd.append("preferred_job_location", f.preferred_job_location);
       fd.append("employment_type", f.employment_type);
 
@@ -343,8 +373,14 @@ if (!getToken()) return;
       fd.append("total_experience", f.total_experience);
       if (f.current_company) fd.append("current_company", f.current_company);
       if (f.current_designation) fd.append("current_designation", f.current_designation);
-      if (f.current_salary_ctc.trim()) fd.append("current_salary_ctc", f.current_salary_ctc.trim());
-      if (f.expected_salary.trim()) fd.append("expected_salary", f.expected_salary.trim());
+
+      // backend expects integer; only send if numeric
+      const ctc = f.current_salary_ctc.trim();
+      if (ctc && /^\d+$/.test(ctc)) fd.append("current_salary_ctc", ctc);
+
+      const expSal = f.expected_salary.trim();
+      if (expSal && /^\d+$/.test(expSal)) fd.append("expected_salary", expSal);
+
       if (f.notice_period) fd.append("notice_period", f.notice_period);
 
       const skills = parseSkills(f.key_skills_text);
@@ -367,15 +403,14 @@ if (!getToken()) return;
       setApplied(true);
       setFormMsg("Application submitted successfully");
     } catch (e: any) {
-
-
+      // eslint-disable-next-line no-console
       console.log("APPLY ERROR:", e);
-if (e?.response?.status === 401) {
-  localStorage.setItem("jp_return_to", `/jobs/${id}`);
-  nav("/auth", { replace: false });
-  return;
-}
 
+      if (e?.response?.status === 401) {
+        localStorage.setItem("jp_return_to", `/jobs/${id}`);
+        nav("/auth", { replace: false });
+        return;
+      }
 
       const msg =
         e?.response?.data?.message ||
@@ -405,9 +440,7 @@ if (e?.response?.status === 401) {
           <Link to="/jobs" className="inline-flex items-center gap-2 text-white/80 hover:text-white">
             <ArrowLeft size={18} /> Back to Jobs
           </Link>
-          <div className="mt-6 rounded-2xl border border-white/12 bg-white/5 p-6 text-white/80">
-            {errMsg ?? "No job data"}
-          </div>
+          <div className="mt-6 rounded-2xl border border-white/12 bg-white/5 p-6 text-white/80">{errMsg ?? "No job data"}</div>
         </div>
       </main>
     );
@@ -437,9 +470,7 @@ if (e?.response?.status === 401) {
 
               <p className="mt-1 text-white/85 font-semibold">{ui.company}</p>
 
-              <p className="text-white/70 mt-1 text-sm md:text-base">
-                Fill details once, apply fast. Track status in Candidate Dashboard.
-              </p>
+              <p className="text-white/70 mt-1 text-sm md:text-base">Fill details once, apply fast. Track status in Candidate Dashboard.</p>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <Chip tone="neutral">
@@ -496,9 +527,7 @@ if (e?.response?.status === 401) {
                 disabled={!canSubmit}
                 className={
                   "px-5 py-3 rounded-full font-extrabold transition inline-flex items-center justify-center gap-2 " +
-                  (!canSubmit
-                    ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed"
-                    : "bg-white text-[#061433] hover:opacity-95")
+                  (!canSubmit ? "bg-white/10 border border-white/12 text-white/70 cursor-not-allowed" : "bg-white text-[#061433] hover:opacity-95")
                 }
               >
                 {submitting ? "Submitting..." : applied ? "Applied" : "Apply Now"}
@@ -566,6 +595,7 @@ if (e?.response?.status === 401) {
               </div>
 
               <div className="mt-5 grid gap-4">
+                {/* Personal */}
                 <div className={soft + " p-5"}>
                   <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Personal</div>
 
@@ -605,6 +635,7 @@ if (e?.response?.status === 401) {
                   </div>
                 </div>
 
+                {/* Address */}
                 <div className={soft + " p-5"}>
                   <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Address</div>
 
@@ -615,7 +646,12 @@ if (e?.response?.status === 401) {
 
                   <div className="mt-3 grid sm:grid-cols-2 gap-3">
                     <input className={input} placeholder="Pincode *" value={f.pincode} onChange={(e) => setF((p) => ({ ...p, pincode: e.target.value.replace(/[^\d]/g, "") }))} />
-                    <input className={input} placeholder="Preferred Job Location (optional)" value={f.preferred_job_location} onChange={(e) => setF((p) => ({ ...p, preferred_job_location: e.target.value }))} />
+                    <input
+                      className={input}
+                      placeholder="Preferred Job Location (optional)"
+                      value={f.preferred_job_location}
+                      onChange={(e) => setF((p) => ({ ...p, preferred_job_location: e.target.value }))}
+                    />
                   </div>
 
                   <div className="mt-3">
@@ -623,11 +659,17 @@ if (e?.response?.status === 401) {
                   </div>
                 </div>
 
+                {/* Preferences */}
                 <div className={soft + " p-5"}>
                   <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Preferences</div>
 
                   <div className="mt-3 grid sm:grid-cols-2 gap-3">
-                    <input className={input} placeholder="Department / Role (optional)" value={f.department_role} onChange={(e) => setF((p) => ({ ...p, department_role: e.target.value }))} />
+                    <input
+                      className={input}
+                      placeholder="Department / Role (optional)"
+                      value={f.department_role}
+                      onChange={(e) => setF((p) => ({ ...p, department_role: e.target.value }))}
+                    />
 
                     <div className="relative">
                       <select
@@ -643,20 +685,109 @@ if (e?.response?.status === 401) {
                       <Briefcase className="absolute left-4 top-3.5 text-[#061433]/55" size={18} />
                     </div>
                   </div>
+
+                  {/* ✅ Interested Categories */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">
+                        Interested Categories (Pick up to 4)
+                      </div>
+
+                      <Chip tone={f.interested_titles.length ? "good" : "warn"}>
+                        {f.interested_titles.length ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                        {f.interested_titles.length}/4
+                      </Chip>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {f.interested_titles.length ? (
+                        f.interested_titles.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            className="px-3 py-1.5 rounded-full bg-white/10 border border-white/12 text-xs font-extrabold hover:bg-white/12"
+                            onClick={() => setF((p) => ({ ...p, interested_titles: p.interested_titles.filter((x) => x !== name) }))}
+                            title="Remove"
+                          >
+                            {name} ✕
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-xs text-white/60">Search and select categories.</div>
+                      )}
+                    </div>
+
+                    <input
+                      className={input + " mt-3"}
+                      placeholder="Search categories (e.g., Accountant, Customer Care, IT)…"
+                      value={titleQuery}
+                      onChange={(e) => setTitleQuery(e.target.value)}
+                    />
+
+                    <div className="mt-2 max-h-48 overflow-auto rounded-2xl border border-white/12 bg-white/5">
+                      {titleLoading ? (
+                        <div className="px-4 py-3 text-sm text-white/70">Loading…</div>
+                      ) : titleOptions.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-white/70">No results</div>
+                      ) : (
+                        titleOptions.map((name) => {
+                          const selected = f.interested_titles.includes(name);
+                          const disabled = !selected && f.interested_titles.length >= 4;
+
+                          return (
+                            <button
+                              key={name}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => {
+                                setF((p) => {
+                                  const has = p.interested_titles.includes(name);
+                                  if (has) return { ...p, interested_titles: p.interested_titles.filter((x) => x !== name) };
+                                  if (p.interested_titles.length >= 4) return p;
+                                  return { ...p, interested_titles: [...p.interested_titles, name] };
+                                });
+                              }}
+                              className={
+                                "w-full text-left px-4 py-2 text-sm border-b border-white/10 last:border-b-0 " +
+                                (selected ? "bg-white text-[#061433] font-extrabold" : "text-white/85 hover:bg-white/10") +
+                                (disabled ? " opacity-50 cursor-not-allowed" : "")
+                              }
+                            >
+                              {name}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="mt-2 text-xs text-white/60">You can select maximum 4 categories.</div>
+                  </div>
                 </div>
 
+                {/* Skills */}
                 <div className={soft + " p-5"}>
                   <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Skills</div>
 
                   <div className="mt-3">
-                    <input className={input} placeholder="Key Skills (comma separated) (optional)" value={f.key_skills_text} onChange={(e) => setF((p) => ({ ...p, key_skills_text: e.target.value }))} />
+                    <input
+                      className={input}
+                      placeholder="Key Skills (comma separated) (optional)"
+                      value={f.key_skills_text}
+                      onChange={(e) => setF((p) => ({ ...p, key_skills_text: e.target.value }))}
+                    />
                   </div>
 
                   <div className="mt-3">
-                    <textarea className={textarea} placeholder="Cover Letter (optional)" value={f.cover_letter} onChange={(e) => setF((p) => ({ ...p, cover_letter: e.target.value }))} />
+                    <textarea
+                      className={textarea}
+                      placeholder="Cover Letter (optional)"
+                      value={f.cover_letter}
+                      onChange={(e) => setF((p) => ({ ...p, cover_letter: e.target.value }))}
+                    />
                   </div>
                 </div>
 
+                {/* Resume */}
                 <div className={soft + " p-5"}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -683,6 +814,7 @@ if (e?.response?.status === 401) {
                   ) : null}
                 </div>
 
+                {/* Consent */}
                 <div className={soft + " p-5 space-y-2 text-sm"}>
                   <div className="text-[11px] font-extrabold tracking-[0.18em] text-white/75 uppercase">Consent *</div>
 
