@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CandidateProfileController;
 use App\Http\Controllers\Api\CompanyFollowController;
 use App\Http\Controllers\Api\Chat\ChatRoomController;
 use App\Http\Controllers\Api\Chat\ChatMessageController;
+use App\Http\Controllers\Api\SuggestionController;
 
 // ✅ Admin Controllers
 use App\Http\Controllers\Api\Admin\AdminAuthController;
@@ -35,7 +36,8 @@ Route::post('/contact', [ContactMessageController::class, 'store']);
 
 Route::get('/jobs', [JobController::class, 'index']);
 Route::get('/jobs/{id}', [JobController::class, 'show']);
-Route::get('/suggestions', [JobController::class, 'suggestions']);
+Route::get('/suggestions', [SuggestionController::class, 'index']);
+
 // Email OTP Auth (public)
 Route::post('/auth/email/request-otp', [AuthController::class, 'requestEmailOtp']);
 Route::post('/auth/email/verify-otp', [AuthController::class, 'verifyEmailOtp']);

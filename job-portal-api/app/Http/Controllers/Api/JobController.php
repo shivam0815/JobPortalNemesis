@@ -92,7 +92,7 @@ if ($company !== '') {
             ];
         }
 
-        // bulk insert (fast)
+        
         Notification::insert($rows);
     }
 }
