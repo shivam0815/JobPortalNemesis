@@ -112,6 +112,8 @@ Route::get('/company/follows', [CompanyFollowController::class, 'myFollows']);
     Route::post('/jobs', [JobController::class, 'store']);
     Route::get('/jobs/{job}/applications', [ApplicationController::class, 'index']);
     Route::patch('/applications/{application}/status', [ApplicationController::class, 'updateStatus']);
+    Route::post('/applications/{application}/viewed', [ApplicationController::class, 'markViewed']);
+
 // Employer company profile
 Route::get('/employer/profile', [EmployerProfileController::class, 'show']);
 Route::post('/employer/profile', [EmployerProfileController::class, 'update']);

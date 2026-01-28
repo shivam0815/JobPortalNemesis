@@ -282,7 +282,8 @@ await api.patch("/notifications/read-all");
     setNotifs((p) => p.map((x) => (String(x.id) === String(id) ? { ...x, is_read: true } : x)));
 
     try {
-await api.patch(`/notifications/${id}/read`);
+await api.post("/notifications/mark-read", { id });
+
     } catch {
       // ignore
     }
@@ -598,7 +599,9 @@ await api.patch(`/notifications/${id}/read`);
                     <option value="Hired">Hired</option>
                   </select>
                 </div>
-              </div>
+              </div>await api.post("/notifications/mark-all-read");
+
+
             </div>
 
             <div className="mt-5 space-y-3">

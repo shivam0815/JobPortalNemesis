@@ -8,6 +8,8 @@ use App\Models\Job;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use App\Models\Notification;
+
 
 class ApplicationController extends Controller
 {
@@ -83,16 +85,28 @@ class ApplicationController extends Controller
         ]);
 
         // ✅ validate interested_titles against suggestions table
-        if (!empty($data['interested_titles'])) {
-            $count = DB::table('suggestions')
-                ->where('field', 'job_title')
-                ->whereIn('value', $data['interested_titles'])
-                ->count();
+       // ✅ validate interested_titles against suggestions table (SOFT validation)
+// - If suggestions are not configured yet, do NOT block apply.
+// - If some titles are invalid, just keep the valid ones.
+if (!empty($data['interested_titles'])) {
+    $valid = DB::table('suggestions')
+        ->where('field', 'job_title')
+        ->whereIn('value', $data['interested_titles'])
+        ->pluck('value')
+        ->toArray();
 
-            if ($count !== count($data['interested_titles'])) {
-                return response()->json(['message' => 'Invalid job category selected'], 422);
-            }
-        }
+    // If suggestions table has entries but none matched, you can either:
+// 1) allow empty (recommended for production stability)
+    $data['interested_titles'] = array_values(array_unique($valid));
+
+// 2) (Optional stricter) if suggestions exist and user sent invalid, then block
+//    but only if suggestions table actually has job_title configured:
+// $hasJobTitleSuggestions = DB::table('suggestions')->where('field','job_title')->exists();
+// if ($hasJobTitleSuggestions && count($valid) !== count($data['interested_titles'])) {
+//     return response()->json(['message' => 'Invalid job category selected'], 422);
+// }
+}
+
 
         // ✅ Consent must be accepted
         if (
@@ -191,7 +205,14 @@ class ApplicationController extends Controller
             'resume_url' => $resumePath,
             'status' => 'applied',
         ]);
-
+Notification::create([
+            'user_id' => $job->employer_id,
+            'type'    => 'new_application',
+            'title'   => 'New application received',
+            'body'    => ($user->name ?? ($candidate->full_name ?? 'A candidate')) . ' applied for "' . ($job->title ?? 'a job') . '"',
+            'link'    => '/employer',
+            'read_at' => null,
+        ]);
         return response()->json([
             'message' => 'Applied successfully',
             'application' => $application,
@@ -248,11 +269,73 @@ class ApplicationController extends Controller
             'status' => ['required', Rule::in(['shortlisted', 'rejected', 'hired'])]
         ]);
 
-        $application->update(['status' => $data['status']]);
+        $oldStatus = $application->status;
+        $newStatus = $data['status'];
+
+        $application->update(['status' => $newStatus]);
+
+        // 🔔 Notify candidate on status change (Naukri-style)
+        if ($oldStatus !== $newStatus) {
+            $job = Job::select('id', 'title')->find($application->job_id);
+
+            $label = match ($newStatus) {
+                'shortlisted' => 'Shortlisted',
+                'rejected'    => 'Rejected',
+                'hired'       => 'Hired',
+                default       => ucfirst($newStatus),
+            };
+
+            Notification::create([
+                'user_id' => $application->candidate_id, // ✅ candidate user id
+                'type'    => 'application_status',
+                'title'   => 'Application ' . $label,
+                'body'    => 'Your application for "' . ($job->title ?? 'a job') . '" is now ' . strtolower($label) . '.',
+                // ✅ candidate should land where they can see status
+                'link'    => '/candidate/applications',
+                'read_at' => null,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Application status updated',
             'application' => $application->fresh()
         ]);
     }
+
+    public function markViewed(Request $request, Application $application)
+{
+    $user = $request->user();
+
+    // ✅ only employer/admin can mark viewed
+    if (!in_array($user->role ?? null, ['employer', 'admin'], true)) {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
+    // ✅ employer can only view applications of his own jobs
+    if (($user->role ?? null) === 'employer') {
+        $job = Job::find($application->job_id);
+        if (!$job || (int) $job->employer_id !== (int) $user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+    } else {
+        $job = Job::find($application->job_id);
+    }
+
+    // ✅ only first time: set viewed_at + send notification
+    if (!$application->viewed_at) {
+        $application->update(['viewed_at' => now()]);
+
+        Notification::create([
+            'user_id' => $application->candidate_id,
+            'type'    => 'application_viewed',
+            'title'   => 'Employer viewed your application',
+            'body'    => 'Your application for "' . ($job->title ?? 'a job') . '" was viewed.',
+            'link'    => '/candidate/applications',
+            'read_at' => null,
+        ]);
+    }
+
+    return response()->json(['ok' => true, 'viewed_at' => $application->viewed_at]);
+}
+
 }

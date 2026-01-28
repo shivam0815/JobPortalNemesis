@@ -272,7 +272,15 @@ export default function JobDetails() {
           params: { field: "job_title", q, limit: 20 },
         });
         if (!alive) return;
-        setTitleOptions(Array.isArray(res.data) ? res.data : []);
+        const raw = res.data;
+const arr = Array.isArray(raw) ? raw : raw?.data ?? [];
+const names = arr
+  .map((x: any) => (typeof x === "string" ? x : x?.value ?? x?.name ?? ""))
+  .map((s: string) => s.trim())
+  .filter(Boolean);
+
+setTitleOptions(names);
+
       } catch {
         if (alive) setTitleOptions([]);
       } finally {
@@ -333,6 +341,7 @@ export default function JobDetails() {
       nav("/auth", { replace: false });
       return;
     }
+    
 
     setFormMsg(null);
 
@@ -360,7 +369,11 @@ export default function JobDetails() {
       if (f.department_role) fd.append("department_role", f.department_role);
 
       // ✅ send interested_titles[]
-      f.interested_titles.forEach((t, i) => fd.append(`interested_titles[${i}]`, t));
+// ✅ Laravel-friendly array format
+f.interested_titles
+  .map((x) => x.trim())
+  .filter(Boolean)
+  .forEach((t) => fd.append("interested_titles[]", t));
 
       if (f.preferred_job_location) fd.append("preferred_job_location", f.preferred_job_location);
       fd.append("employment_type", f.employment_type);
@@ -411,7 +424,11 @@ export default function JobDetails() {
         nav("/auth", { replace: false });
         return;
       }
-
+if (e?.response?.status === 409) {
+    setApplied(true);
+    setFormMsg(e?.response?.data?.message || "You have already applied for this job.");
+    return;
+  }
       const msg =
         e?.response?.data?.message ||
         (typeof e?.response?.data === "string" ? e.response.data : null) ||

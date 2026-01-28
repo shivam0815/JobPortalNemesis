@@ -88,6 +88,7 @@ type ApplicantRowUI = {
   status: ApplicantStatusUI;
   resumeUrl?: string | null;
   createdAt?: string;
+  raw?: any;
 };
 
 const statusMeta: Record<
@@ -400,6 +401,7 @@ export default function EmployerDashboard() {
   const [applications, setApplications] = useState<ApplicantRowUI[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [appsMsg, setAppsMsg] = useState<string | null>(null);
+  const [openApp, setOpenApp] = useState<ApplicantRowUI | null>(null);
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] =
@@ -574,6 +576,7 @@ useEffect(() => {
             status: uiStatusFromApi(a.status),
             resumeUrl: buildPublicFileUrl(a.resume_url),
             createdAt: a.created_at,
+            raw: a,
           };
         }
       );
@@ -615,6 +618,14 @@ useEffect(() => {
       console.log("UPDATE STATUS ERROR:", e);
       // revert by refetch
       if (selectedJobId) fetchApplicants(selectedJobId);
+    }
+  };
+
+    const markApplicationViewed = async (applicationId: string) => {
+    try {
+      await api.post(`/applications/${applicationId}/viewed`);
+    } catch (e) {
+      console.log("MARK VIEWED ERROR:", e);
     }
   };
 
@@ -812,10 +823,17 @@ useEffect(() => {
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
               updateStatus={updateApplicationStatus}
+                markViewed={markApplicationViewed}
+                setOpenApp={setOpenApp}
+
+
             />
           )}
         </div>
       </div>
+      {openApp ? (
+      <ApplicationDetailsModal app={openApp} onClose={() => setOpenApp(null)} />
+    ) : null}
     </Shell>
   );
 }
@@ -1352,6 +1370,9 @@ function ApplicantsPanel({
   statusFilter,
   setStatusFilter,
   updateStatus,
+  markViewed,
+  setOpenApp,
+
 }: {
   jobs: JobItem[];
   jobsLoading: boolean;
@@ -1366,6 +1387,10 @@ function ApplicantsPanel({
   statusFilter: "All" | ApplicantStatusUI;
   setStatusFilter: (v: "All" | ApplicantStatusUI) => void;
   updateStatus: (applicationId: string, next: ApplicantStatusUI) => void;
+    markViewed: (applicationId: string) => Promise<void>;
+      setOpenApp: (v: ApplicantRowUI) => void; // ✅ ADD
+
+
 }) {
   return (
     <Panel
@@ -1485,6 +1510,8 @@ function ApplicantsPanel({
                     ? "bad"
                     : "neutral";
 
+                
+
                 return (
                   <tr key={a.applicationId} className="border-t border-white/10">
                     <td className="p-3">
@@ -1503,15 +1530,18 @@ function ApplicantsPanel({
                     <td className="p-3">
                       <div className="flex gap-2 flex-wrap items-center">
                         {a.resumeUrl ? (
-                          <a
-                            href={a.resumeUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-4 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition inline-flex items-center gap-2"
-                          >
-                            <Eye size={16} />
-                            View Resume
-                          </a>
+   <a
+  href={a.resumeUrl}
+  target="_blank"
+  rel="noreferrer"
+  onClick={() => markViewed(a.applicationId)}
+  className="px-4 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition inline-flex items-center gap-2"
+>
+  <Eye size={16} />
+  View Resume
+</a>
+
+
                         ) : (
                           <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 inline-flex items-center gap-2">
                             <Eye size={16} />
@@ -1536,12 +1566,14 @@ function ApplicantsPanel({
                         </select>
 
                         <button
-                          type="button"
-                          className="px-4 py-2 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition inline-flex items-center gap-2"
-                        >
-                          <FileText size={16} />
-                          Notes (UI)
-                        </button>
+  type="button"
+  onClick={() => setOpenApp(a)}
+  className="px-4 py-2 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition inline-flex items-center gap-2"
+>
+  <FileText size={16} />
+  View Details
+</button>
+
                       </div>
                     </td>
                   </tr>
@@ -1554,3 +1586,188 @@ function ApplicantsPanel({
     </Panel>
   );
 }
+
+function ApplicationDetailsModal({
+  app,
+  onClose,
+}: {
+  app: ApplicantRowUI;
+  onClose: () => void;
+}) {
+  const raw = app?.raw || {};
+  const candidate = raw?.candidate || {};
+  const job = raw?.job || {};
+
+  const label = "text-xs uppercase tracking-wider text-white/55 font-extrabold";
+  const box =
+    "rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/90";
+
+  const niceDate = (s?: string) => {
+    if (!s) return "—";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const resumeUrl = app.resumeUrl; // already built via buildPublicFileUrl()
+
+  return (
+    <div className="fixed inset-0 z-[999]">
+      {/* backdrop */}
+      <button
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        aria-label="Close modal"
+      />
+
+      {/* modal */}
+      <div className="absolute inset-0 grid place-items-center p-4">
+        <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-[#071A3A]/95 shadow-2xl overflow-hidden">
+          {/* header */}
+          <div className="p-5 md:p-6 border-b border-white/10 flex items-start justify-between gap-3">
+            <div>
+              <div className="text-lg md:text-xl font-extrabold">
+                Application Details
+              </div>
+              <div className="text-sm text-white/65 mt-1">
+                {app.name}
+                {app.email ? ` • ${app.email}` : ""}
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="h-10 w-10 rounded-2xl bg-white/10 border border-white/12 hover:bg-white/15 transition grid place-items-center"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* body */}
+          <div className="p-5 md:p-6 space-y-5">
+            {/* top summary */}
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className={box}>
+                <div className={label}>City</div>
+                <div className="mt-1 font-semibold">{app.city || "—"}</div>
+              </div>
+
+              <div className={box}>
+                <div className={label}>Role</div>
+                <div className="mt-1 font-semibold">{app.role || "—"}</div>
+              </div>
+
+              <div className={box}>
+                <div className={label}>Status</div>
+                <div className="mt-1 font-semibold">{String(raw?.status || app.status || "—")}</div>
+              </div>
+
+              <div className={box}>
+                <div className={label}>Applied At</div>
+                <div className="mt-1 font-semibold">{niceDate(raw?.created_at || app.createdAt)}</div>
+              </div>
+            </div>
+
+            {/* candidate + job */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4">
+                <div className="text-sm font-extrabold mb-3">Candidate</div>
+
+                <div className="grid gap-3">
+                  <div className={box}>
+                    <div className={label}>Name</div>
+                    <div className="mt-1 font-semibold">
+                      {candidate?.name || app.name || "—"}
+                    </div>
+                  </div>
+
+                  <div className={box}>
+                    <div className={label}>Email</div>
+                    <div className="mt-1 font-semibold">
+                      {candidate?.email || app.email || "—"}
+                    </div>
+                  </div>
+
+                  {/* OPTIONAL fields: show only if exist */}
+                  {raw?.cover_letter ? (
+                    <div className={box}>
+                      <div className={label}>Cover Letter</div>
+                      <div className="mt-1 whitespace-pre-wrap text-white/85">
+                        {raw.cover_letter}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4">
+                <div className="text-sm font-extrabold mb-3">Job</div>
+
+                <div className="grid gap-3">
+                  <div className={box}>
+                    <div className={label}>Job Title</div>
+                    <div className="mt-1 font-semibold">
+                      {job?.title || raw?.applied_job_title || "—"}
+                    </div>
+                  </div>
+
+                  <div className={box}>
+                    <div className={label}>Location</div>
+                    <div className="mt-1 font-semibold">
+                      {job?.location || "—"}
+                    </div>
+                  </div>
+
+                  {raw?.department_role ? (
+                    <div className={box}>
+                      <div className={label}>Department / Role</div>
+                      <div className="mt-1 font-semibold">{raw.department_role}</div>
+                    </div>
+                  ) : null}
+
+                  <div className={box}>
+                    <div className={label}>Resume</div>
+                    <div className="mt-2">
+                      {resumeUrl ? (
+                        <a
+                          href={resumeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-[#061433] font-extrabold hover:opacity-95 transition"
+                        >
+                          <Eye size={16} />
+                          Open Resume
+                        </a>
+                      ) : (
+                        <div className="text-white/60">No resume uploaded</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* footer */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end pt-1">
+              <button
+                onClick={onClose}
+                className="h-11 px-6 rounded-full bg-white/10 border border-white/12 hover:bg-white/12 transition font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
