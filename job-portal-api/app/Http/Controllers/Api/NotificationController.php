@@ -12,6 +12,8 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         return Notification::where('user_id', $request->user()->id)
+                ->whereNull('read_at')              // ✅ only unread
+
             ->orderByDesc('created_at')
             ->limit(50)
             ->get();
