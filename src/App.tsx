@@ -19,6 +19,7 @@ import CandidateApplications from "./pages/candidate/CandidateApplications";
 import About from "./pages/About";
 import Services from "./pages/Services";
 import Nemesis from "./pages/Nemesis";
+import HrService from "./pages/services/HrService";
 
 
 import ServiceDetail from "./pages/services/ServiceDetail";
@@ -38,7 +39,6 @@ import AdminJobs from "./pages/admin/AdminJobs";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
-import HrPage from "./pages/services/HrPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
 import ProtectedRoute from "./lib/ProtectedRoute";
 import CandidateDashboard from "./pages/CandidateDashboard";
@@ -120,7 +120,8 @@ export default function App() {
                 <Route path="/services/training-development" element={<TrainingDevelopment />} />
                 <Route path="/services/hr-consulting" element={<HRConsulting />} />
                 <Route path="/services/:slug" element={<ServiceDetail />} />
-<Route path="/services/hr-training" element={<HrPage />} />
+<Route path="/services/hr-training" element={<HrService />} />
+
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 <Route path="/chat" element={<ChatRoomPage />} />
 <Route path="/chat/:roomId" element={<ChatRoomPage />} />

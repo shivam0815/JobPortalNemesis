@@ -1,4 +1,4 @@
-import { Globe, Mail } from "lucide-react";
+import { Globe, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -40,23 +40,35 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-  <Link to="/nemesis" className="hover:text-white transition">
-    Nemesis
-  </Link>
-</li>
-
+                <Link to="/nemesis" className="hover:text-white transition">
+                  Nemesis
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
             <div className="text-sm font-semibold text-white mb-3">Contact</div>
+
             <div className="space-y-2 text-sm text-white/75">
-             
+              {/* Address */}
+              <div className="flex items-start gap-2">
+                <MapPin size={16} className="mt-1 shrink-0" />
+                <div>
+                  REG- ADD- S.NO 3RD TAJPUR ROAD BHAMIAN KALAN <br />
+                  NEAR HUNDAL CHOWK <br />
+                  LUDHIANA, PUNJAB – 141015
+                </div>
+              </div>
+
+              {/* Email */}
               <div className="flex items-center gap-2">
                 <Mail size={16} />
                 flexicare@nemesisgroup.in
               </div>
+
+              {/* Website */}
               <div className="flex items-center gap-2">
                 <Globe size={16} />
                 www.nemesisgroup.in

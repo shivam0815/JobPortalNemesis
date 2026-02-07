@@ -105,12 +105,13 @@ export default function ContactUs() {
           </div>
         </section>
 
-        {/* Contact details (same as your code) */}
+        {/* Contact details */}
         <section className={card}>
           <h2 className="text-xl font-extrabold">Reach Us</h2>
           <p className="text-white/70 text-sm mt-1">All Over India • Remote + On-site (as needed)</p>
 
           <div className="mt-5 grid gap-3">
+            {/* Phone */}
             <div className="rounded-3xl bg-white/6 border border-white/10 p-4 flex items-start gap-3">
               <Phone size={18} className="mt-0.5" />
               <div>
@@ -119,6 +120,7 @@ export default function ContactUs() {
               </div>
             </div>
 
+            {/* Email */}
             <div className="rounded-3xl bg-white/6 border border-white/10 p-4 flex items-start gap-3">
               <Mail size={18} className="mt-0.5" />
               <div>
@@ -127,6 +129,7 @@ export default function ContactUs() {
               </div>
             </div>
 
+            {/* Website */}
             <div className="rounded-3xl bg-white/6 border border-white/10 p-4 flex items-start gap-3">
               <Globe size={18} className="mt-0.5" />
               <div>
@@ -135,6 +138,20 @@ export default function ContactUs() {
               </div>
             </div>
 
+            {/* Registered Address - Added */}
+            <div className="rounded-3xl bg-white/6 border border-white/10 p-4 flex items-start gap-3">
+              <MapPin size={18} className="mt-0.5" />
+              <div>
+                <div className="font-semibold">Registered Address</div>
+                <div className="text-sm text-white/75">
+                  REG- ADD- S.NO 3RD TAJPUR ROAD BHAMIAN KALAN <br />
+                  NEAR HUNDAL CHOWK <br />
+                  LUDHIANA, PUNJAB – 141015
+                </div>
+              </div>
+            </div>
+
+            {/* Service Area */}
             <div className="rounded-3xl bg-white/6 border border-white/10 p-4 flex items-start gap-3">
               <MapPin size={18} className="mt-0.5" />
               <div>
