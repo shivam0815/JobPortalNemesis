@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import  { useMemo, useState } from "react";
 import {
   Search,
   Bell,
@@ -264,7 +264,6 @@ export default function AdminDashboard() {
     return applications.filter((x) => [x.id, x.candidate, x.job, x.company, x.stage, x.source].some((v) => v.toLowerCase().includes(s)));
   }, [q]);
 
-  const StatTone = (v: string) => v === "Verified" || v === "Live" || v === "Active" || v === "Hired";
 
   const sidebar = [
     { key: "overview", label: "Dashboard", icon: BarChart3 },
