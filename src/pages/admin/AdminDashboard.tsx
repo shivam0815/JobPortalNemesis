@@ -1,7 +1,7 @@
 // src/pages/admin/AdminDashboard.tsx
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { adminApi } from "../../lib/adminApi";
-import type { DashSummary, ContactStatus, ContactListResp } from "../../lib/adminApi";
+import type { DashSummary, ContactStatus } from "../../lib/adminApi";
 
 const Card = ({
   title,

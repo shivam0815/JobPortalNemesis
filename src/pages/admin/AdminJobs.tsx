@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { adminApi } from "../../lib/adminApi";
 import type { JobRow } from "../../lib/adminApi";
 

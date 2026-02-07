@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { adminApi } from "../../lib/adminApi";
 import type { ApplicationRow } from "../../lib/adminApi";
 const STATUS = ["applied", "viewed", "shortlisted", "rejected", "hired"];

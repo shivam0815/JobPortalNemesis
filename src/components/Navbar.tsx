@@ -204,12 +204,6 @@ export default function Navbar() {
     if (n.link) nav(n.link);
   };
 
-  const dismissNotif = async (n: Notif) => {
-    try {
-      await api.post("/notifications/mark-read", { id: n.id });
-    } catch {}
-    setNotifs((p) => p.filter((x) => x.id !== n.id));
-  };
 
   const logout = () => {
     localStorage.removeItem("jp_token");

@@ -1,7 +1,6 @@
 // src/pages/Jobs.tsx
 import { useEffect, useMemo, useState } from "react";
 import JobCard from "../components/JobCard";
-import CompanyCard from "../components/CompanyCard";
 import { api } from "../lib/api";
 
 interface Job {
@@ -53,7 +52,6 @@ export default function Jobs() {
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
   // mobile: collapse companies by default
-  const [showCompanies, setShowCompanies] = useState(false);
 
   useEffect(() => {
     (async () => {
