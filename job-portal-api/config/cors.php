@@ -1,24 +1,20 @@
 <?php
 
 return [
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cross-Origin Resource Sharing (CORS) Configuration
-    |--------------------------------------------------------------------------
-    */
-
     'paths' => ['api/*'],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        
-        // add production frontend later
-        // 'https://your-frontend.com',
-    ],
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+
+    'https://jobportalnemesis.onrender.com',
+    ' https://nemesis-frontend-pearl.vercel.app/auth/register', 
+    'https://www.nemesisgroup.in/'
+
+],
+
 
     'allowed_origins_patterns' => [],
 
